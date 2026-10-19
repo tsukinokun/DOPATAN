@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { M_PLUS_Rounded_1c } from "next/font/google";
+import { AuthSync } from "@/components/AuthSync";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import "./globals.css";
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ja" className={`${rounded.variable} antialiased`}>
       <body className="min-h-dvh">
         {children}
+        <AuthSync />
         <ServiceWorker />
       </body>
     </html>

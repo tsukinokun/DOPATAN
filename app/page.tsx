@@ -9,6 +9,7 @@ import { SCORE_BANDS, THEMES, type Theme } from "@/lib/types";
 import { filterScope, WORDS } from "@/lib/words";
 import { Chip, Hydrated, Panel, PopButton } from "@/components/ui";
 import { useProgress } from "@/stores/progress";
+import { useAuth } from "@/stores/auth";
 import { useSettings } from "@/stores/settings";
 
 export default function HomePage() {
@@ -42,9 +43,12 @@ function Home() {
         >
           <Image src="/logo.svg" alt="DOPATAN" width={240} height={60} priority />
         </motion.div>
-        <PopButton href="/settings" color="white" className="px-3 py-2" testId="open-settings">
-          ⚙️
-        </PopButton>
+        <div className="flex gap-2">
+          <AccountButton />
+          <PopButton href="/settings" color="white" className="px-3 py-2" testId="open-settings">
+            ⚙️
+          </PopButton>
+        </div>
       </header>
 
       <Panel className="grid grid-cols-3 gap-2 text-center">
@@ -121,5 +125,16 @@ function Stat({
         {unit && <span className="ml-1 text-xs text-slate-500">{unit}</span>}
       </span>
     </div>
+  );
+}
+
+/** ログイン中は ☁️、ゲストは 👤。ログイン機能が無効なら出さない */
+function AccountButton() {
+  const status = useAuth((s) => s.status);
+  if (status === "disabled") return null;
+  return (
+    <PopButton href="/account" color="white" className="px-3 py-2" testId="open-account">
+      {status === "signedIn" ? "☁️" : "👤"}
+    </PopButton>
   );
 }

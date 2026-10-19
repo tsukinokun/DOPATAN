@@ -95,3 +95,11 @@ test("keyboard digits answer on desktop", async ({ page, isMobile }) => {
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("score")).not.toHaveText("0");
 });
+
+test("works as guest-only without Supabase settings", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("play")).toBeVisible();
+  await expect(page.getByTestId("open-account")).toHaveCount(0);
+  await page.goto("/account");
+  await expect(page.getByText("ログイン機能は準備中です。")).toBeVisible();
+});
