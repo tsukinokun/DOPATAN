@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160">
+  <g transform="rotate(-4 320 80)" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="120" text-anchor="middle">
+    <text x="328" y="128" fill="#1a1033">DOPATAN</text>
+    <text x="320" y="120" fill="#ffd23f" stroke="#1a1033" stroke-width="10" paint-order="stroke">DOPA<tspan fill="#3ee6c1">TAN</tspan></text>
+  </g>
+</svg>
