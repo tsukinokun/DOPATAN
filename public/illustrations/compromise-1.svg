@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 妥協:2つの矢印が真ん中で歩み寄る -->
+  <path d="M2 13h8V9l7 7-7 7v-4H2Z" fill="#00A6ED"/>
+  <path d="M30 13h-8V9l-7 7 7 7v-4h8Z" fill="#FF822D" opacity=".95"/>
+  <circle cx="16" cy="16" r="3.4" fill="#fff"/>
+  <circle cx="16" cy="16" r="2.2" fill="#00D26A"/>
+  <path d="M14.9 16.1l.8.8 1.6-1.7" stroke="#fff" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -7,7 +7,8 @@ const byId = (id: string) => WORDS.find((w) => w.id === id)!;
 
 describe("pickDistractors", () => {
   it("never pairs senses of the same word or synonyms", () => {
-    for (let seed = 0; seed < 50; seed++) {
+    // 全単語 × 数シードで確かめる(単語が数千あるので、シードを増やすとテストが遅くなる)
+    for (let seed = 0; seed < 5; seed++) {
       for (const target of WORDS) {
         const options = [target, ...pickDistractors(target, WORDS, 3, seededRng(seed))];
         expect(options).toHaveLength(4);

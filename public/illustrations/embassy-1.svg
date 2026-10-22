@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 大使館:旗を掲げた建物と門 -->
+  <path d="M15.4 1.5h1.2V9h-1.2Z" fill="#9B9B9B"/>
+  <path d="M16.6 2h7.4l-2 2.2 2 2.3h-7.4Z" fill="#F92F60"/>
+  <circle cx="19.8" cy="4.2" r="1.1" fill="#fff"/>
+  <path d="M3 13.5 16 8l13 5.5Z" fill="#D3883E"/>
+  <rect x="4" y="13.5" width="24" height="2" fill="#E1D8EC"/>
+  <path d="M6 15.5h2.4v10H6Zm5 0h2.4v10H11Zm7.6 0H21v10h-2.4Zm5 0H26v10h-2.4Z" fill="#F3EEF8"/>
+  <rect x="14.2" y="18" width="3.6" height="7.5" rx="1.8" fill="#0074BA"/>
+  <rect x="3" y="25.5" width="26" height="2.5" fill="#B4ACBC"/>
+  <rect x="1.5" y="28" width="29" height="2" rx=".6" fill="#9B9B9B"/>
+</svg>
