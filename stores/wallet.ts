@@ -21,7 +21,7 @@ import { EMPTY_WALLET, type WalletData } from "@/lib/economy/walletData";
 import { getSkin, type SkinCategory } from "@/lib/skins";
 import { isMastered } from "@/lib/srs";
 import { appStorage } from "@/lib/storage";
-import { WORDS } from "@/lib/words";
+import { getWords } from "@/lib/words";
 import { useProgress } from "./progress";
 
 type WalletStore = WalletData & {
@@ -56,7 +56,7 @@ function pruneDaily(daily: Record<string, DailyStats>): Record<string, DailyStat
 
 function masteredWordList() {
   const { progress } = useProgress.getState();
-  return WORDS.filter((w) => isMastered(progress[w.id])).map((w) => ({ id: w.id, word: w.word }));
+  return getWords().filter((w) => isMastered(progress[w.id])).map((w) => ({ id: w.id, word: w.word }));
 }
 
 /** 実績の判定に使う数値(コレクション画面の進み具合の表示にも使う) */

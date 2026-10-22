@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "./random";
-import { SessionEngine, type Question } from "./session";
+import { isSpellable, SessionEngine, type Question } from "./session";
 import { applyAnswer, choiceCountFor, type SenseProgress } from "./srs";
-import { WORDS } from "./words";
+import { ALL_WORDS as WORDS } from "./testWords";
 
 function run(
   answers: (q: Question) => boolean,
@@ -89,5 +89,56 @@ describe("srs", () => {
     p = applyAnswer(p, false, 0);
     expect(p.box).toBe(1);
     expect(p.wrong).toBe(1);
+  });
+});
+
+describe("question modes", () => {
+  function engine(modes: Question["mode"][], progress: Record<string, SenseProgress> = {}) {
+    return new SessionEngine({
+      allWords: WORDS,
+      scope: WORDS,
+      progress,
+      modes,
+      now: 0,
+      rng: seededRng(7),
+    });
+  }
+
+  it("never uses spelling for intros, early exposures or unspellable words", () => {
+    const e = engine(["spelling"]);
+    for (let i = 0; i < 120; i++) {
+      const q = e.next();
+      if (q.mode === "spelling") {
+        expect(isSpellable(q.target.word)).toBe(true);
+        expect(q.isIntro).toBe(false);
+      }
+      if (q.isIntro) expect(q.mode).toBe("wordToPicture");
+      e.answer(q, true);
+    }
+  });
+
+  it("asks a spelling question for a reviewed spellable word", () => {
+    const progress: Record<string, SenseProgress> = {};
+    for (const w of WORDS) progress[w.id] = { exposures: 3, box: 3, due: 1e15, correct: 3, wrong: 0 };
+    progress["budget-1"] = { exposures: 3, box: 3, due: 0, correct: 3, wrong: 0 };
+    const q = engine(["spelling"], progress).next();
+    expect(q.target.id).toBe("budget-1");
+    expect(q.mode).toBe("spelling");
+  });
+
+  it("uses only the enabled modes", () => {
+    const e = engine(["listening"]);
+    for (let i = 0; i < 40; i++) {
+      const q = e.next();
+      expect(q.mode).toBe(q.isIntro ? "wordToPicture" : "listening");
+      e.answer(q, true);
+    }
+  });
+
+  it("knows which words can be spelled", () => {
+    expect(isSpellable("budget")).toBe(true);
+    expect(isSpellable("résumé")).toBe(false);
+    expect(isSpellable("approximately")).toBe(false);
+    expect(isSpellable("go")).toBe(false);
   });
 });

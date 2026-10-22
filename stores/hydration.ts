@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { getWords, loadWords, subscribeWords } from "@/lib/words";
 import { useProgress } from "./progress";
 import { useSettings } from "./settings";
 import { useWallet } from "./wallet";
@@ -11,7 +12,9 @@ function subscribe(onChange: () => void) {
   const unsubSettings = useSettings.persist.onFinishHydration(onChange);
   const unsubProgress = useProgress.persist.onFinishHydration(onChange);
   const unsubWallet = useWallet.persist.onFinishHydration(onChange);
+  const unsubWords = subscribeWords(onChange);
   return () => {
+    unsubWords();
     unsubSettings();
     unsubProgress();
     unsubWallet();
@@ -19,11 +22,16 @@ function subscribe(onChange: () => void) {
 }
 
 function isHydrated() {
-  return useSettings.persist.hasHydrated() && useProgress.persist.hasHydrated() && useWallet.persist.hasHydrated();
+  return (
+    useSettings.persist.hasHydrated() &&
+    useProgress.persist.hasHydrated() &&
+    useWallet.persist.hasHydrated() &&
+    getWords().length > 0
+  );
 }
 
 /**
- * 保存データの読み込みはサーバー描画と食い違わないよう、マウント後に行う。
+ * 保存データと単語の読み込みはサーバー描画と食い違わないよう、マウント後に行う。
  * 画面の一部が先にハイドレーションされて読み込みが済んでいても、
  * サーバーと同じ「未読み込み」から始めるため useSyncExternalStore を使う。
  */
@@ -35,6 +43,7 @@ export function useStoresHydrated(): boolean {
       useSettings.persist.rehydrate(),
       useProgress.persist.rehydrate(),
       useWallet.persist.rehydrate(),
+      loadWords(),
     ]);
   }, []);
   return hydrated;

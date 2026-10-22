@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { conflicts, pickDistractors } from "./distractors";
 import { seededRng } from "./random";
-import { WORDS } from "./words";
+import { ALL_WORDS as WORDS } from "./testWords";
 
 const byId = (id: string) => WORDS.find((w) => w.id === id)!;
 

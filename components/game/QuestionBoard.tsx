@@ -2,6 +2,7 @@
 
 import { motion, type PanInfo } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { speak } from "@/lib/fx/audio";
 import type { Question } from "@/lib/session";
 import type { WordSense } from "@/lib/types";
 import { PictureCard, WordChip, type CardState } from "./cards";
@@ -65,6 +66,8 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
   };
 
   const sourceHidden = feedback?.correct === true;
+  /** 下の選択肢が絵か(英単語→絵、リスニング)、英単語か(絵→英単語) */
+  const picturesBelow = mode !== "pictureToWord";
   const grid =
     options.length === 1 ? "grid-cols-1 max-w-[16rem]" : "grid-cols-2 max-w-xl";
 
@@ -93,15 +96,14 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
             const hit = hitTest(info);
             if (hit) answer(hit);
           }}
+          onTap={mode === "listening" ? () => speak(target.word) : undefined}
           className={`relative cursor-grab touch-none active:cursor-grabbing ${
-            mode === "wordToPicture" ? "min-w-44" : "h-40 w-40"
+            mode === "pictureToWord" ? "h-40 w-40" : "min-w-44"
           }`}
         >
-          {mode === "wordToPicture" ? (
-            <WordChip sense={target} />
-          ) : (
-            <PictureCard sense={target} showJapanese={showJapanese} size="lg" />
-          )}
+          {mode === "wordToPicture" && <WordChip sense={target} />}
+          {mode === "pictureToWord" && <PictureCard sense={target} showJapanese={showJapanese} size="lg" />}
+          {mode === "listening" && <SpeakerChip />}
           {isIntro && !locked && <SwipeHint />}
         </motion.div>
       </div>
@@ -109,7 +111,7 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
       {/* 4枚の絵カードが縦に収まるよう、画面の高さに合わせて幅を抑える */}
       <div
         className={`grid w-full gap-4 ${grid}`}
-        style={mode === "wordToPicture" && options.length > 2 ? { maxWidth: "min(36rem, calc(100dvh - 24rem))" } : undefined}
+        style={picturesBelow && options.length > 2 ? { maxWidth: "min(36rem, calc(100dvh - 24rem))" } : undefined}
       >
         {options.map((sense, i) => (
           <motion.div
@@ -126,9 +128,9 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
                 : { scale: 1, opacity: 1, x: 0 }
             }
             transition={{ delay: feedback ? 0 : i * 0.05, type: "spring", stiffness: 420, damping: 20 }}
-            className={`relative ${mode === "wordToPicture" ? "aspect-square" : "h-24"}`}
+            className={`relative ${picturesBelow ? "aspect-square" : "h-24"}`}
           >
-            {mode === "wordToPicture" ? (
+            {picturesBelow ? (
               <PictureCard
                 sense={sense}
                 showJapanese={showJapanese}
@@ -147,6 +149,18 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
           </motion.div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** リスニングで持ち上げる「音」。タップするともう一度聞ける */
+function SpeakerChip() {
+  return (
+    <div className="pop-border flex h-full w-full flex-col items-center justify-center rounded-3xl bg-white px-6 py-3" data-testid="speaker">
+      <span className="text-5xl" aria-hidden>
+        🔊
+      </span>
+      <span className="text-xs font-black text-slate-500">タップでもう一度</span>
     </div>
   );
 }

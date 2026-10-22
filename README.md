@@ -18,7 +18,10 @@ npm run dev      # http://localhost:3000
 npm test         # 単体テスト(Vitest)
 npm run build && npm run e2e   # E2E テスト(Playwright、スマホ幅と PC 幅)
 node scripts/generate-icons.mjs  # public/icons/icon.svg から PWA 用アイコンを書き出す
+node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji にコピーし data/images.json を作る
 ```
+
+単語を増やしたときは、`node scripts/build-images.mjs` と発音音声の作成(`scripts/tts/README.md`)を実行してください。足りない絵や音声は `npm test`(`lib/wordData.test.ts`)が教えてくれます。
 
 ## ログインとクラウド保存(Supabase)
 
@@ -73,7 +76,9 @@ node scripts/generate-icons.mjs  # public/icons/icon.svg から PWA 用アイコ
 | `lib/social/` | リーグ・フレンドの API、表示名、サーバー由来の報酬 |
 | `stores/social.ts`、`components/social/` | フレンド・リーグの状態と画面の部品 |
 | `supabase/migrations/` | データベースの定義(0001〜0003) |
-| `data/words/` | 単語データ(今はサンプル105語。絵は仮の絵文字) |
+| `data/words/` | 単語データ(スコア帯ごと。アプリは使うときに読み込む) |
+| `public/emoji/`、`public/illustrations/` | 単語の絵。[Fluent Emoji](https://github.com/microsoft/fluentui-emoji)(MIT)と、自分で描いた SVG(こちらが優先) |
+| `public/audio/` | 発音音声(Kokoro-82M で作成。無い単語はブラウザの読み上げを使う) |
 
 ## ロードマップ
 
@@ -81,4 +86,4 @@ node scripts/generate-icons.mjs  # public/icons/icon.svg から PWA 用アイコ
 2. ✅ Supabase でログインし、進み具合をクラウドに保存(Google / メール / ゲスト。Apple・X・LINE は後で追加)
 3. ✅ コイン・ジェム、ガチャ、スキン、デイリーミッション、実績
 4. ✅ XP・ランク、週ごとのリーグ制ランキング、フレンド、招待、応援
-5. 単語を約4,000語に増やす。Gemini で画像、オープンソースの音声合成で発音を作る。リスニングとつづり並べ替えを追加する
+5. 🚧 単語を約4,000語に増やす(帯ごとに追加中)。✅ 絵(Fluent Emoji+自作SVG)、✅ 発音音声(Kokoro)、✅ リスニングとつづり並べ替え

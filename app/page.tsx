@@ -6,7 +6,7 @@ import { useState } from "react";
 import { unlockAudio } from "@/lib/fx/audio";
 import { isDue, isMastered } from "@/lib/srs";
 import { SCORE_BANDS, THEMES, type Theme } from "@/lib/types";
-import { filterScope, WORDS } from "@/lib/words";
+import { filterScope, getWords } from "@/lib/words";
 import { CurrencyBar } from "@/components/economy/CurrencyBar";
 import { DailyMissions } from "@/components/economy/DailyMissions";
 import { LoginBonus } from "@/components/economy/LoginBonus";
@@ -32,7 +32,7 @@ function toggle<T>(list: readonly T[], value: T): T[] {
 function Home() {
   const { bands, themes, update } = useSettings();
   const { progress, bestScore, bestCombo } = useProgress();
-  const scope = filterScope(WORDS, bands, themes);
+  const scope = filterScope(getWords(), bands, themes);
   const [now] = useState(Date.now);
   const learned = scope.filter((w) => (progress[w.id]?.exposures ?? 0) > 0).length;
   const mastered = scope.filter((w) => isMastered(progress[w.id])).length;

@@ -1,3 +1,4 @@
+import images from "@/data/images.json";
 import { POS_LABEL, type Theme, type WordSense } from "@/lib/types";
 
 const THEME_COLORS: Record<Theme, string> = {
@@ -21,7 +22,37 @@ const STATE_RING: Record<CardState, string> = {
   reveal: "ring-8 ring-lime-300 animate-pulse",
 };
 
-/** 絵(仮イラストは絵文字)と日本語のカード */
+const IMAGE_SIZE = { md: "h-14 w-14 sm:h-16 sm:w-16 text-5xl sm:text-6xl", lg: "h-20 w-20 sm:h-24 sm:w-24 text-7xl sm:text-8xl" };
+const illustrations = new Set<string>(images.illustrations as string[]);
+const emojiFiles = images.emoji as Record<string, string>;
+
+/** 単語の絵。自分で描いた SVG → Fluent Emoji の SVG → 絵文字の文字、の順で使う */
+export function WordImage({ sense, size = "md" }: { sense: WordSense; size?: "md" | "lg" }) {
+  const src = illustrations.has(sense.id)
+    ? `/illustrations/${sense.id}.svg`
+    : emojiFiles[sense.emoji]
+      ? `/emoji/${emojiFiles[sense.emoji]}.svg`
+      : null;
+  if (!src) {
+    return (
+      <span className={`grid select-none place-items-center leading-none drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)] ${IMAGE_SIZE[size]}`} aria-hidden>
+        {sense.emoji}
+      </span>
+    );
+  }
+  return (
+    // 小さな SVG なので next/image の最適化は使わない
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      draggable={false}
+      className={`select-none drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)] ${IMAGE_SIZE[size]}`}
+    />
+  );
+}
+
+/** 絵と日本語のカード */
 export function PictureCard({
   sense,
   showJapanese,
@@ -40,12 +71,7 @@ export function PictureCard({
     <div
       className={`pop-border relative flex h-full w-full flex-col items-center justify-center gap-1 rounded-3xl bg-gradient-to-br p-2 transition-transform duration-150 ${THEME_COLORS[sense.theme]} ${STATE_RING[state]}`}
     >
-      <span
-        className={`select-none leading-none drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)] ${size === "lg" ? "text-7xl sm:text-8xl" : "text-5xl sm:text-6xl"}`}
-        aria-hidden
-      >
-        {sense.emoji}
-      </span>
+      <WordImage sense={sense} size={size} />
       {showJapanese && (
         <span data-testid="card-ja" className="text-center text-sm font-black leading-tight text-slate-900 sm:text-base">
           <span className="mr-1 rounded-md bg-slate-900 px-1 text-[10px] text-white align-middle">

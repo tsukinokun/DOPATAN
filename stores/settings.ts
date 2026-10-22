@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { appStorage } from "@/lib/storage";
-import type { EffectIntensity, QuestionMode, ScoreBand, Theme } from "@/lib/types";
+import { QUESTION_MODES, type EffectIntensity, type QuestionMode, type ScoreBand, type Theme } from "@/lib/types";
 
 export type Settings = {
   showJapanese: boolean;
@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: true,
   bgm: true,
   vibration: true,
-  modes: ["wordToPicture", "pictureToWord"],
+  modes: [...QUESTION_MODES],
   bands: [],
   themes: [],
 };
@@ -36,6 +36,19 @@ export const useSettings = create<SettingsStore>()(
       ...DEFAULT_SETTINGS,
       update: (patch) => set(patch),
     }),
-    { name: "dopatan-settings", storage: appStorage, skipHydration: true },
+    {
+      name: "dopatan-settings",
+      storage: appStorage,
+      skipHydration: true,
+      version: 1,
+      // version 0 のころはリスニングとつづり並べ替えが無かったので、追加してオンにする
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<Settings>;
+        if (version < 1 && state.modes) {
+          state.modes = [...new Set([...state.modes, "listening", "spelling"] as QuestionMode[])];
+        }
+        return state as SettingsStore;
+      },
+    },
   ),
 );

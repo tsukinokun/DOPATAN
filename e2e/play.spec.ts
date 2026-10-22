@@ -1,4 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import { useModes } from "./helpers";
+
+// つづり並べ替えはドラッグしないので、ここでは除く(e2e/modes.spec.ts で確かめる)
+test.beforeEach(async ({ page }) => {
+  await useModes(page, ["wordToPicture", "pictureToWord", "listening"]);
+});
 
 async function dragTo(page: Page, targetTestId: string) {
   const source = await page.getByTestId("drag-source").boundingBox();

@@ -29,6 +29,17 @@ export type SessionOptions = {
   maxLearning?: number;
 };
 
+/** つづり並べ替えに出せる単語(3〜10文字のアルファベットだけ) */
+export function isSpellable(word: string): boolean {
+  return /^[a-z]{3,10}$/i.test(word);
+}
+
+/** その単語・その段階で出せる出題形式か */
+export function modeFits(mode: QuestionMode, target: WordSense, exposures: number): boolean {
+  if (mode === "spelling") return exposures >= 2 && isSpellable(target.word);
+  return true;
+}
+
 /** 新しい単語は紹介→2枚→4枚の3回で一区切り */
 const RAMP_EXPOSURES = 3;
 /** 再出題までに挟む問題数 */
@@ -156,10 +167,8 @@ export class SessionEngine {
     const choiceCount = choiceCountFor(exposures);
     const isIntro = choiceCount === 1;
     const distractors = pickDistractors(target, allWords, choiceCount - 1, rng);
-    const mode: QuestionMode =
-      isIntro || modes.length === 0
-        ? "wordToPicture"
-        : modes[Math.floor(rng() * modes.length)];
+    const allowed = isIntro ? [] : modes.filter((m) => modeFits(m, target, exposures));
+    const mode: QuestionMode = allowed.length === 0 ? "wordToPicture" : allowed[Math.floor(rng() * allowed.length)];
     return {
       step: this.step,
       target,

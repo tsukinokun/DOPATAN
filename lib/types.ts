@@ -42,6 +42,8 @@ export type WordSense = {
   synonymGroup?: string;
 };
 
-export type QuestionMode = "wordToPicture" | "pictureToWord";
+export type QuestionMode = "wordToPicture" | "pictureToWord" | "listening" | "spelling";
+
+export const QUESTION_MODES: QuestionMode[] = ["wordToPicture", "pictureToWord", "listening", "spelling"];
 
 export type EffectIntensity = "max" | "standard" | "low";

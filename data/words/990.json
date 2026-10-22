@@ -1,0 +1,7 @@
+[
+  {"id":"stipulate-1","word":"stipulate","pos":"verb","ja":"規定する","band":990,"theme":"marketing","emoji":"📜","ipa":"/ˈstɪpjuleɪt/","example":{"en":"The contract stipulates a 30-day notice.","ja":"契約は30日前の通知を規定しています。"},"derivatives":["stipulation (名) 規定"]},
+  {"id":"expedite-1","word":"expedite","pos":"verb","ja":"促進する・早める","band":990,"theme":"manufacturing","emoji":"⏩","ipa":"/ˈekspədaɪt/","example":{"en":"We paid extra to expedite the shipment.","ja":"出荷を早めるために追加料金を払いました。"},"derivatives":["expeditious (形) 迅速な"]},
+  {"id":"meticulous-1","word":"meticulous","pos":"adjective","ja":"細心の","band":990,"theme":"office","emoji":"🔬","ipa":"/məˈtɪkjələs/","example":{"en":"She is meticulous about details.","ja":"彼女は細部に細心の注意を払います。"},"derivatives":["meticulously (副) 細心の注意を払って"]},
+  {"id":"consolidate-1","word":"consolidate","pos":"verb","ja":"統合する","band":990,"theme":"finance","emoji":"🧩","ipa":"/kənˈsɑːlɪdeɪt/","example":{"en":"We consolidated two departments.","ja":"2つの部署を統合しました。"},"derivatives":["consolidation (名) 統合"]},
+  {"id":"provisional-1","word":"provisional","pos":"adjective","ja":"暫定の","band":990,"theme":"meeting","emoji":"🚧","ipa":"/prəˈvɪʒənl/","example":{"en":"This is a provisional schedule.","ja":"これは暫定のスケジュールです。"},"derivatives":["provision (名) 規定・供給"],"synonymGroup":"tentative"}
+]

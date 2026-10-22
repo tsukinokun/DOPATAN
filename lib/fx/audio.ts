@@ -166,12 +166,63 @@ export class Bgm {
   }
 }
 
-/** 発音。フェーズ5で音声合成した音声ファイルに差し替える */
-export function speak(word: string): void {
+/** scripts/tts/generate.py の audio_name と同じ規則 */
+export function audioFileName(word: string): string {
+  return word
+    .toLowerCase()
+    .replace(/é/g, "e")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** 読み込んだ発音(失敗したものは null を覚えておき、読み上げ機能に任せる) */
+const voiceCache = new Map<string, Promise<AudioBuffer | null>>();
+
+function loadVoice(word: string): Promise<AudioBuffer | null> {
+  const a = audio();
+  if (!a) return Promise.resolve(null);
+  const name = audioFileName(word);
+  let buffer = voiceCache.get(name);
+  if (!buffer) {
+    buffer = fetch(`/audio/${name}.mp3`)
+      .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(String(res.status)))))
+      .then((data) => a.ctx.decodeAudioData(data))
+      .catch(() => null);
+    voiceCache.set(name, buffer);
+  }
+  return buffer;
+}
+
+/** 次に出す単語の発音を先に読み込んでおく */
+export function preloadVoice(word: string): void {
+  void loadVoice(word);
+}
+
+function speakWithBrowser(word: string): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(word);
   utterance.lang = "en-US";
   utterance.rate = 0.9;
   window.speechSynthesis.speak(utterance);
+}
+
+let currentVoice: AudioBufferSourceNode | null = null;
+
+/** 発音を再生する。音声ファイルが無い・読み込めないときはブラウザの読み上げを使う */
+export function speak(word: string): void {
+  void loadVoice(word).then((buffer) => {
+    const a = audio();
+    if (!buffer || !a) {
+      speakWithBrowser(word);
+      return;
+    }
+    currentVoice?.stop();
+    const source = a.ctx.createBufferSource();
+    source.buffer = buffer;
+    // 効果音より聞き取りやすいよう、全体の音量(master)を通さずに鳴らす
+    source.connect(a.ctx.destination);
+    source.start();
+    currentVoice = source;
+  });
 }

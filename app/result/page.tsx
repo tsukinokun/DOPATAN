@@ -5,8 +5,9 @@ import { useEffect } from "react";
 import { speak } from "@/lib/fx/audio";
 import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
 import { POS_LABEL } from "@/lib/types";
-import { WORDS } from "@/lib/words";
+import { getWords } from "@/lib/words";
 import { RewardList } from "@/components/economy/RewardList";
+import { WordImage } from "@/components/game/cards";
 import { totalXp, type LedgerEvent } from "@/lib/economy/ledger";
 import { levelFromXp, rankFor } from "@/lib/economy/rewards";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
@@ -21,7 +22,6 @@ export default function ResultPage() {
   );
 }
 
-const byId = new Map(WORDS.map((w) => [w.id, w]));
 
 function Result() {
   const result = useProgress((s) => s.lastResult);
@@ -42,6 +42,7 @@ function ResultView({ result }: { result: SessionResult }) {
   const total = result.correct + result.wrong;
   const accuracy = total === 0 ? 0 : Math.round((result.correct / total) * 100);
 
+  const byId = new Map(getWords().map((w) => [w.id, w]));
   // 単語ごとに、そのセッションで1回でも間違えたかをまとめる
   const words = new Map<string, boolean>();
   for (const a of result.answers) words.set(a.senseId, (words.get(a.senseId) ?? true) && a.correct);
@@ -98,9 +99,7 @@ function ResultView({ result }: { result: SessionResult }) {
           return (
             <li key={id}>
               <Panel className="flex gap-3">
-                <span className="text-4xl" aria-hidden>
-                  {w.emoji}
-                </span>
+                <WordImage sense={w} />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex flex-wrap items-baseline gap-x-2">
                     <span className={`text-xl font-black ${ok ? "text-slate-900" : "text-pink-600"}`}>

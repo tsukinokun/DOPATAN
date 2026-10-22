@@ -3,10 +3,10 @@
 import { motion, useAnimationControls } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bgm, sfx, speak, unlockAudio } from "@/lib/fx/audio";
+import { Bgm, preloadVoice, sfx, speak, unlockAudio } from "@/lib/fx/audio";
 import { burstConfetti, feverConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
 import { SessionEngine, type Question } from "@/lib/session";
-import { filterScope, WORDS } from "@/lib/words";
+import { filterScope, getWords } from "@/lib/words";
 import { useProgress, type AnswerLog } from "@/stores/progress";
 import { useSettings } from "@/stores/settings";
 import { useSocial } from "@/stores/social";
@@ -14,6 +14,12 @@ import { useWallet } from "@/stores/wallet";
 import { FEVER_EVERY, Hud } from "./Hud";
 import { BigBanner, FeverOverlay, ScorePopup } from "./Overlays";
 import { QuestionBoard, type Feedback } from "./QuestionBoard";
+import { SpellingBoard } from "./SpellingBoard";
+
+/** 出題形式に合った盤面 */
+function Board(props: React.ComponentProps<typeof QuestionBoard>) {
+  return props.question.mode === "spelling" ? <SpellingBoard {...props} /> : <QuestionBoard {...props} />;
+}
 
 export const SESSION_MS = 3 * 60 * 1000;
 const FEVER_MS = 8000;
@@ -38,8 +44,8 @@ export function PlayScreen() {
   const [engine] = useState(() => {
     const settings = useSettings.getState();
     return new SessionEngine({
-      allWords: WORDS,
-      scope: filterScope(WORDS, settings.bands, settings.themes),
+      allWords: getWords(),
+      scope: filterScope(getWords(), settings.bands, settings.themes),
       progress: useProgress.getState().progress,
       modes: settings.modes,
       now: Date.now(),
@@ -86,6 +92,9 @@ export function PlayScreen() {
     (q: Question) => {
       setFeedback(null);
       setQuestion(q);
+      preloadVoice(q.target.word);
+      // リスニングは問題が出たらすぐ聞かせる(効果音の設定とは関係なく、聞かないと答えられないため)
+      if (q.mode === "listening") speak(q.target.word);
       if (q.isIntro) {
         showBanner({ text: "NEW!", sub: "新しい単語", className: "rainbow-text" }, 800);
         playSound(() => {
@@ -257,7 +266,8 @@ export function PlayScreen() {
           onExit={() => router.push("/")}
         />
         {question && phase !== "countdown" && (
-          <QuestionBoard
+          <Board
+            key={question.step}
             question={question}
             showJapanese={showJapanese}
             feedback={phase === "timeup" ? (feedback ?? { chosenId: "", correct: false }) : feedback}

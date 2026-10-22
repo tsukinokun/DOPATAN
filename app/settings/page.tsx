@@ -19,11 +19,11 @@ const INTENSITIES: { value: EffectIntensity; label: string }[] = [
   { value: "low", label: "控えめ" },
 ];
 
-const MODES: { value: QuestionMode | "listening" | "spelling"; label: string; ready: boolean }[] = [
-  { value: "wordToPicture", label: "英単語 → 絵", ready: true },
-  { value: "pictureToWord", label: "絵 → 英単語", ready: true },
-  { value: "listening", label: "リスニング", ready: false },
-  { value: "spelling", label: "つづり並べ替え", ready: false },
+const MODES: { value: QuestionMode; label: string; note?: string }[] = [
+  { value: "wordToPicture", label: "英単語 → 絵" },
+  { value: "pictureToWord", label: "絵 → 英単語" },
+  { value: "listening", label: "リスニング", note: "音を聞いて絵を選ぶ" },
+  { value: "spelling", label: "つづり並べ替え", note: "覚えかけの単語で出題" },
 ];
 
 function SettingsView() {
@@ -84,16 +84,16 @@ function SettingsView() {
       <Panel className="flex flex-col gap-2">
         <h2 className="font-black">出題形式</h2>
         {MODES.map((m) => (
-          <label key={m.value} className={`flex items-center gap-3 py-1 font-black ${m.ready ? "" : "opacity-40"}`}>
+          <label key={m.value} className="flex items-center gap-3 py-1 font-black">
             <input
               type="checkbox"
               className="h-5 w-5 accent-pink-500"
-              disabled={!m.ready}
-              checked={m.ready && settings.modes.includes(m.value as QuestionMode)}
-              onChange={() => toggleMode(m.value as QuestionMode)}
+              checked={settings.modes.includes(m.value)}
+              onChange={() => toggleMode(m.value)}
+              data-testid={`mode-${m.value}`}
             />
             {m.label}
-            {!m.ready && <span className="text-xs">(近日追加)</span>}
+            {m.note && <span className="text-xs font-normal text-slate-500">{m.note}</span>}
           </label>
         ))}
       </Panel>
