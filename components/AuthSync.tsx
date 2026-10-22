@@ -14,7 +14,10 @@ import { useWallet, walletSnapshot } from "@/stores/wallet";
 
 const SAVE_DELAY_MS = 2000;
 
-function snapshot(): SyncedData<Settings> {
+/** クラウドに保存する設定。ゲストの名前は端末だけのもの(ログイン後はクラウドのニックネームを使う) */
+type CloudSettings = Omit<Settings, "guestName">;
+
+function snapshot(): SyncedData<CloudSettings> {
   const { progress, sessions, bestScore, bestCombo } = useProgress.getState();
   const { showJapanese, effectIntensity, sound, bgm, vibration, modes, bands, themes } = useSettings.getState();
   return {
@@ -25,9 +28,9 @@ function snapshot(): SyncedData<Settings> {
   };
 }
 
-function apply(data: SyncedData<Settings>) {
+function apply(data: SyncedData<CloudSettings>) {
   useProgress.setState({ progress: data.progress, ...data.stats });
-  if (data.settings) useSettings.setState({ ...DEFAULT_SETTINGS, ...data.settings });
+  if (data.settings) useSettings.setState({ ...DEFAULT_SETTINGS, ...data.settings, guestName: useSettings.getState().guestName });
   if (data.wallet) useWallet.setState(data.wallet);
 }
 
@@ -83,7 +86,7 @@ export function AuthSync() {
       if (userId === session.user.id) return;
       set({ status: "signedIn", userId: session.user.id, email: session.user.email ?? null, syncState: "syncing" });
       try {
-        const merged = mergeData(snapshot(), await loadRemote<Settings>(supabase, session.user.id));
+        const merged = mergeData(snapshot(), await loadRemote<CloudSettings>(supabase, session.user.id));
         applying = true;
         apply(merged);
         applying = false;

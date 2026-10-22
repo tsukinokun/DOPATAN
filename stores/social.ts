@@ -3,10 +3,12 @@ import { totalXp, type LedgerEvent } from "@/lib/economy/ledger";
 import { currentStreak, dateKey, levelFromXp } from "@/lib/economy/rewards";
 import { isMastered } from "@/lib/srs";
 import { socialApi, type Inbox, type MyProfile } from "@/lib/social/api";
+import { validateNickname } from "@/lib/social/names";
 import { rewardsFromInbox } from "@/lib/social/rewards";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "./auth";
 import { useProgress } from "./progress";
+import { useSettings } from "./settings";
 import { useWallet } from "./wallet";
 
 /** 招待リンクから来たときに、ログインするまでコードを覚えておく場所 */
@@ -76,7 +78,18 @@ export const useSocial = create<SocialStore>()((set, get) => ({
   refresh: async () => {
     const supabase = signedInClient();
     if (!supabase) return;
-    const [profile, inbox] = await Promise.all([socialApi.myProfile(supabase), socialApi.inbox(supabase)]);
+    const [loaded, inbox] = await Promise.all([socialApi.myProfile(supabase), socialApi.inbox(supabase)]);
+    // ゲストのときに付けた名前があり、クラウドの名前がまだ無ければ、それを引き継ぐ
+    let profile = loaded;
+    const guestName = validateNickname(useSettings.getState().guestName ?? "");
+    if (profile.nickname === null && guestName.ok) {
+      try {
+        await socialApi.setNickname(supabase, guestName.value);
+        profile = { ...profile, nickname: guestName.value };
+      } catch {
+        // 使えない名前だった場合は、いつもどおりニックネームの登録をお願いする
+      }
+    }
     const fresh = useWallet.getState().grantServerRewards(rewardsFromInbox(inbox, Date.now()));
     set((s) => ({ profile, inbox, newRewards: [...s.newRewards, ...fresh] }));
     await socialApi.publishStats(supabase, publicStats());

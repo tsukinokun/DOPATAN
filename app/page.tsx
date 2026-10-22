@@ -14,7 +14,6 @@ import { LevelBar, SocialNotices } from "@/components/social/common";
 import { Chip, Hydrated, Panel, PopButton } from "@/components/ui";
 import { useSocial } from "@/stores/social";
 import { useProgress } from "@/stores/progress";
-import { useAuth } from "@/stores/auth";
 import { useSettings } from "@/stores/settings";
 
 export default function HomePage() {
@@ -49,7 +48,7 @@ function Home() {
           <Image src="/logo.svg" alt="DOPATAN" width={240} height={60} priority />
         </motion.div>
         <div className="flex gap-2">
-          <AccountButton />
+          <ProfileButton />
           <PopButton href="/settings" color="white" className="px-3 py-2" testId="open-settings">
             ⚙️
           </PopButton>
@@ -154,13 +153,11 @@ function Stat({
   );
 }
 
-/** ログイン中は ☁️、ゲストは 👤。ログイン機能が無効なら出さない */
-function AccountButton() {
-  const status = useAuth((s) => s.status);
-  if (status === "disabled") return null;
+/** プロフィール(名前・記録・ログイン)への入口 */
+function ProfileButton() {
   return (
-    <PopButton href="/account" color="white" className="px-3 py-2" testId="open-account">
-      {status === "signedIn" ? "☁️" : "👤"}
+    <PopButton href="/profile" color="white" className="px-3 py-2" testId="open-profile">
+      👤
     </PopButton>
   );
 }

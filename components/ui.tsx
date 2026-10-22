@@ -60,8 +60,12 @@ export function PopButton({
   );
 }
 
-export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`pop-border rounded-3xl bg-white/95 p-4 ${className}`}>{children}</section>;
+export function Panel({ children, className = "", testId }: { children: ReactNode; className?: string; testId?: string }) {
+  return (
+    <section className={`pop-border rounded-3xl bg-white/95 p-4 ${className}`} data-testid={testId}>
+      {children}
+    </section>
+  );
 }
 
 export function Chip({

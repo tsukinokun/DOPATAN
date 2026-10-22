@@ -16,13 +16,15 @@ type Props = {
   feedback: Feedback | null;
   onAnswer: (chosenId: string, targetRect: DOMRect | undefined) => void;
   onPickup?: () => void;
+  /** 一時停止中は操作を受け付けない */
+  paused?: boolean;
 };
 
 /**
  * 絵と日本語を見て、バラバラの文字をタップして英単語を作る。PC ではキーボードでも打てる。
  * 1文字でも違う文字を選んだら、その時点で不正解にする。
  */
-export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPickup }: Props) {
+export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false }: Props) {
   const word = question.target.word.toLowerCase();
   const tiles = useMemo(
     () => shuffle([...word].map((letter, i) => ({ letter, key: i })), Math.random),
@@ -31,7 +33,7 @@ export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPi
   const [used, setUsed] = useState<number[]>([]);
   const [wrongKey, setWrongKey] = useState<number | null>(null);
   const slotsRef = useRef<HTMLDivElement>(null);
-  const locked = feedback !== null;
+  const locked = feedback !== null || paused;
   const typed = used.map((k) => tiles.find((t) => t.key === k)!.letter).join("");
 
   const press = (key: number) => {

@@ -15,17 +15,19 @@ type Props = {
   feedback: Feedback | null;
   onAnswer: (chosenId: string, targetRect: DOMRect | undefined) => void;
   onPickup?: () => void;
+  /** 一時停止中は操作を受け付けない */
+  paused?: boolean;
 };
 
 /**
  * 上の「持ち上げるもの」を下の選択肢のどれかに重ねて答える(Drops 方式)。
  * PC では数字キー(1〜4)でも選べる。
  */
-export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPickup }: Props) {
+export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false }: Props) {
   const { target, options, mode, isIntro } = question;
   const targetRefs = useRef(new Map<string, HTMLElement>());
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const locked = feedback !== null;
+  const locked = feedback !== null || paused;
 
   const hitTest = useCallback((info: PanInfo): string | null => {
     const x = info.point.x - window.scrollX;

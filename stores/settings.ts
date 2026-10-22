@@ -13,6 +13,8 @@ export type Settings = {
   /** 空なら全範囲 */
   bands: ScoreBand[];
   themes: Theme[];
+  /** ログインしていない人の名前(端末に保存)。ログインしてクラウドの名前が無ければ、それに使う */
+  guestName: string | null;
 };
 
 type SettingsStore = Settings & {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   modes: [...QUESTION_MODES],
   bands: [],
   themes: [],
+  guestName: null,
 };
 
 export const useSettings = create<SettingsStore>()(

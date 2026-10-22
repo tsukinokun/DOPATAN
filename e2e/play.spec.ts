@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { useModes } from "./helpers";
+import { openHome, useModes } from "./helpers";
 
 // つづり並べ替えはドラッグしないので、ここでは除く(e2e/modes.spec.ts で確かめる)
 test.beforeEach(async ({ page }) => {
@@ -20,14 +20,6 @@ async function waitForQuestion(page: Page) {
   await expect(page.getByTestId("drag-source")).toBeVisible({ timeout: 10_000 });
   // 出題アニメーションが落ち着くのを待つ
   await page.waitForTimeout(450);
-}
-
-/** ホームを開き、その日最初に出るログインボーナスを閉じる */
-export async function openHome(page: Page) {
-  await page.goto("/");
-  const receive = page.getByTestId("login-bonus-receive");
-  await receive.click({ timeout: 5000 }).catch(() => {});
-  await expect(page.getByTestId("login-bonus")).toHaveCount(0);
 }
 
 async function startGame(page: Page) {
@@ -123,7 +115,8 @@ test("quitting and playing again starts a fresh 90-second game", async ({ page }
   await page.waitForTimeout(4000);
   const before = Number(await page.getByTestId("timer").textContent());
   expect(before).toBeLessThanOrEqual(87);
-  await page.getByRole("button", { name: "やめる" }).click();
+  await page.getByTestId("pause").click();
+  await page.getByTestId("pause-quit").click();
   await expect(page).toHaveURL(/\/$/);
   await page.getByTestId("play").click({ force: true });
   await waitForQuestion(page);
@@ -139,4 +132,28 @@ test("the play screen blocks pull-to-refresh and page scrolling", async ({ page 
     main: getComputedStyle(document.querySelector("main")!).touchAction,
   }));
   expect(styles).toEqual({ html: "none", body: "none", main: "none" });
+});
+
+test("the ✕ button pauses the timer until the player chooses", async ({ page }) => {
+  await startGame(page);
+  await page.getByTestId("pause").click();
+  await expect(page.getByTestId("pause-dialog")).toBeVisible();
+  const paused = await page.getByTestId("timer").textContent();
+  await page.waitForTimeout(3000);
+  await expect(page.getByTestId("timer")).toHaveText(paused!);
+  // 一時停止中は答えられない
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("score")).toHaveText("0");
+  await page.getByTestId("pause-resume").click();
+  await expect(page.getByTestId("pause-dialog")).toHaveCount(0);
+  await page.waitForTimeout(2500);
+  expect(Number(await page.getByTestId("timer").textContent())).toBeLessThan(Number(paused));
+  await expect(page).toHaveURL(/\/play$/);
+});
+
+test("Escape closes the pause dialog", async ({ page }) => {
+  await startGame(page);
+  await page.getByTestId("pause").click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("pause-dialog")).toHaveCount(0);
 });

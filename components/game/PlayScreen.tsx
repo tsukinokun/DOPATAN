@@ -12,7 +12,7 @@ import { useSettings } from "@/stores/settings";
 import { useSocial } from "@/stores/social";
 import { useWallet } from "@/stores/wallet";
 import { FEVER_EVERY, Hud } from "./Hud";
-import { BigBanner, FeverOverlay, ScorePopup } from "./Overlays";
+import { BigBanner, FeverOverlay, PauseDialog, ScorePopup } from "./Overlays";
 import { QuestionBoard, type Feedback } from "./QuestionBoard";
 import { SpellingBoard } from "./SpellingBoard";
 
@@ -63,13 +63,16 @@ export function PlayScreen() {
   const [fever, setFever] = useState(false);
   const [banner, setBanner] = useState<{ text: string; sub?: string; className?: string } | null>(null);
   const [popup, setPopup] = useState<{ id: number; x: number; y: number; text: string } | null>(null);
+  const [paused, setPaused] = useState(false);
 
   const stats = useRef({ maxCombo: 0, correct: 0, wrong: 0, feverCount: 0, newWords: 0, answers: [] as AnswerLog[] });
   const scoreRef = useRef(0);
   const timeLeftRef = useRef(SESSION_MS);
+  const pausedRef = useRef(false);
+  /** フィーバーが終わる残り時間。一時停止中に終わらないよう、壁時計ではなくゲームの時間で決める */
+  const feverEndsAt = useRef<number | null>(null);
   const bgm = useRef<Bgm | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const feverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shake = useAnimationControls();
 
   const later = useCallback((fn: () => void, ms: number) => {
@@ -113,16 +116,21 @@ export function PlayScreen() {
     return () => window.removeEventListener("pointerdown", onPointer);
   }, []);
 
+  const startBgm = useCallback(() => {
+    const s = useSettings.getState();
+    if (!s.sound || !s.bgm) return;
+    bgm.current?.stop();
+    bgm.current = new Bgm();
+    bgm.current.start();
+    bgm.current.setFever(feverEndsAt.current !== null);
+  }, []);
+
   const startGame = useCallback(() => {
     showBanner({ text: "GO!!", className: "text-yellow-300" }, 600);
     setPhase("playing");
     presentQuestion(engine.next());
-    const s = useSettings.getState();
-    if (s.sound && s.bgm) {
-      bgm.current = new Bgm();
-      bgm.current.start();
-    }
-  }, [engine, presentQuestion, showBanner]);
+    if (!pausedRef.current) startBgm();
+  }, [engine, presentQuestion, showBanner, startBgm]);
 
   const endGame = useCallback(() => {
     setPhase("timeup");
@@ -152,15 +160,19 @@ export function PlayScreen() {
     return () => ids.forEach(clearTimeout);
   }, [playSound, startGame]);
 
-  // タイマー(タブが裏にある間は止める)
+  // タイマー(タブが裏にある間と、一時停止中は止める)
   useEffect(() => {
     if (phase !== "playing") return;
     let last = performance.now();
     const id = setInterval(() => {
       const now = performance.now();
-      if (!document.hidden) timeLeftRef.current = Math.max(0, timeLeftRef.current - (now - last));
+      if (!document.hidden && !pausedRef.current) timeLeftRef.current = Math.max(0, timeLeftRef.current - (now - last));
       last = now;
       setTimeLeft(timeLeftRef.current);
+      if (feverEndsAt.current !== null && timeLeftRef.current <= feverEndsAt.current) {
+        feverEndsAt.current = null;
+        setFever(false);
+      }
       if (timeLeftRef.current === 0) {
         clearInterval(id);
         endGame();
@@ -177,7 +189,6 @@ export function PlayScreen() {
     const pending = timers.current;
     return () => {
       pending.forEach(clearTimeout);
-      if (feverTimer.current) clearTimeout(feverTimer.current);
       bgm.current?.stop();
     };
   }, []);
@@ -190,13 +201,12 @@ export function PlayScreen() {
     feverConfetti(level);
     vibrate([40, 30, 40, 30, 120]);
     if (level !== "low") void shake.start({ x: [0, -10, 10, -6, 6, 0], transition: { duration: 0.4 } });
-    if (feverTimer.current) clearTimeout(feverTimer.current);
-    feverTimer.current = setTimeout(() => setFever(false), FEVER_MS);
+    feverEndsAt.current = Math.max(0, timeLeftRef.current - FEVER_MS);
   }, [level, playSound, shake, showBanner]);
 
   const handleAnswer = useCallback(
     (chosenId: string, rect: DOMRect | undefined) => {
-      if (!question || feedback || phase !== "playing") return;
+      if (!question || feedback || phase !== "playing" || pausedRef.current) return;
       const correct = chosenId === question.target.id;
       engine.answer(question, correct);
       recordAnswer(question.target.id, correct);
@@ -253,6 +263,19 @@ export function PlayScreen() {
     [combo, engine, feedback, fever, later, level, phase, playSound, presentQuestion, question, recordAnswer, shake, showBanner, startFever],
   );
 
+  const pause = useCallback(() => {
+    if (phase === "timeup") return;
+    pausedRef.current = true;
+    setPaused(true);
+    bgm.current?.stop();
+  }, [phase]);
+
+  const resume = useCallback(() => {
+    pausedRef.current = false;
+    setPaused(false);
+    if (phase === "playing") startBgm();
+  }, [phase, startBgm]);
+
   // スワイプ中にブラウザの「引っ張って更新」やスクロールが起きないよう、画面全体のタッチ操作を止める
   return (
     <motion.main animate={shake} className="relative flex min-h-dvh touch-none flex-col overscroll-none">
@@ -264,7 +287,7 @@ export function PlayScreen() {
           score={score}
           combo={combo}
           fever={fever}
-          onExit={() => router.push("/")}
+          onExit={pause}
         />
         {question && phase !== "countdown" && (
           <Board
@@ -274,6 +297,7 @@ export function PlayScreen() {
             feedback={phase === "timeup" ? (feedback ?? { chosenId: "", correct: false }) : feedback}
             onAnswer={handleAnswer}
             onPickup={() => playSound(() => sfx.pickup())}
+            paused={paused}
           />
         )}
       </div>
@@ -284,6 +308,7 @@ export function PlayScreen() {
       />
       <BigBanner show={banner !== null} text={banner?.text ?? ""} sub={banner?.sub} className={banner?.className} />
       <ScorePopup popup={popup} />
+      <PauseDialog open={paused} onResume={resume} onQuit={() => router.push("/")} />
     </motion.main>
   );
 }

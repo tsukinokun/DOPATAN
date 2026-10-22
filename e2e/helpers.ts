@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import w600 from "../data/words/600.json";
 import w730 from "../data/words/730.json";
 import w860 from "../data/words/860.json";
@@ -43,4 +43,12 @@ export async function onlyReview(page: Page, dueId: string) {
     },
     { ids: ALL_IDS, due: dueId },
   );
+}
+
+/** ホームを開き、その日最初に出るログインボーナスを閉じる */
+export async function openHome(page: Page) {
+  await page.goto("/");
+  const receive = page.getByTestId("login-bonus-receive");
+  await receive.click({ timeout: 5000 }).catch(() => {});
+  await expect(page.getByTestId("login-bonus")).toHaveCount(0);
 }

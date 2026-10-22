@@ -30,7 +30,8 @@ export function Hud({
         <button
           type="button"
           onClick={onExit}
-          aria-label="やめる"
+          aria-label="一時停止"
+          data-testid="pause"
           className="pop-border grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-slate-900"
         >
           ✕

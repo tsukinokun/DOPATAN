@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Achievements } from "@/components/economy/Achievements";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { ownedSkins } from "@/lib/economy/ledger";
-import { ACHIEVEMENTS, achievementEventId } from "@/lib/economy/rewards";
 import { setSoundSkin, sfx, unlockAudio } from "@/lib/fx/audio";
 import { CATEGORY_LABEL, SKINS, skinOf, type SkinCategory, type SoundLook } from "@/lib/skins";
-import { achievementContext, useWallet } from "@/stores/wallet";
+import { useWallet } from "@/stores/wallet";
 
 export default function CollectionPage() {
   return (
@@ -119,43 +119,5 @@ function Skins() {
         );
       })}
     </>
-  );
-}
-
-function Achievements() {
-  const state = useWallet();
-  const ledger = state.ledger;
-  const context = achievementContext(state);
-  const unlocked = ACHIEVEMENTS.filter((a) => ledger[achievementEventId(a.id)]).length;
-
-  return (
-    <Panel className="flex flex-col gap-3">
-      <p className="font-black">
-        {unlocked} / {ACHIEVEMENTS.length} 個を達成
-      </p>
-      <ul className="flex flex-col gap-3" data-testid="achievements">
-        {ACHIEVEMENTS.map((a) => {
-          const done = Boolean(ledger[achievementEventId(a.id)]);
-          const value = Math.min(a.value(context), a.target);
-          return (
-            <li key={a.id} className={`flex flex-col gap-1 ${done ? "" : "opacity-80"}`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-black">
-                  {done ? "🏆" : "🔒"} {a.label}
-                </span>
-                <span className="text-sm font-black text-slate-500">{done ? "達成!" : `💎${a.gems}`}</span>
-              </div>
-              <span className="text-xs text-slate-500">{a.description}</span>
-              <div className="h-2.5 overflow-hidden rounded-full border-2 border-slate-900 bg-slate-100">
-                <div
-                  className={`h-full ${done ? "bg-amber-400" : "bg-sky-400"}`}
-                  style={{ width: `${(value / a.target) * 100}%` }}
-                />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </Panel>
   );
 }

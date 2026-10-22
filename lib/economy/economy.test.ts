@@ -13,6 +13,7 @@ import {
   mergeDaily,
   missionsFor,
   pendingRewards,
+  recentDays,
   sessionCoins,
 } from "./rewards";
 
@@ -151,5 +152,21 @@ describe("rewards", () => {
 
   it("has unique achievement ids", () => {
     expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length);
+  });
+});
+
+describe("recentDays", () => {
+  it("lists the last 30 days oldest first and fills days without play with zero", () => {
+    const daily = {
+      "2026-10-22": { ...EMPTY_DAILY, sessions: 2, correct: 40 },
+      "2026-10-01": { ...EMPTY_DAILY, sessions: 1, correct: 7 },
+      "2026-09-01": { ...EMPTY_DAILY, sessions: 9, correct: 99 },
+    };
+    const days = recentDays(daily, "2026-10-22");
+    expect(days).toHaveLength(30);
+    expect(days[0]).toEqual({ date: "2026-09-23", sessions: 0, correct: 0 });
+    expect(days[29]).toEqual({ date: "2026-10-22", sessions: 2, correct: 40 });
+    expect(days.find((d) => d.date === "2026-10-01")?.correct).toBe(7);
+    expect(days.reduce((sum, d) => sum + d.correct, 0)).toBe(47);
   });
 });

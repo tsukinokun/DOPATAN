@@ -103,10 +103,18 @@ export function Modal({ open, onClose, children }: { open: boolean; onClose: () 
   );
 }
 
-/** ニックネームの登録・変更 */
-export function NicknameForm({ onDone }: { onDone?: () => void }) {
+/** ニックネームの登録・変更。onSave を渡さなければ、ログイン中のクラウドの名前を変える */
+export function NicknameForm({
+  onDone,
+  initial,
+  onSave = (name) => useSocial.getState().setNickname(name),
+}: {
+  onDone?: () => void;
+  initial?: string | null;
+  onSave?: (name: string) => Promise<void> | void;
+}) {
   const profile = useSocial((s) => s.profile);
-  const [value, setValue] = useState(profile?.nickname ?? "");
+  const [value, setValue] = useState(initial ?? profile?.nickname ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -118,7 +126,7 @@ export function NicknameForm({ onDone }: { onDone?: () => void }) {
     }
     setBusy(true);
     try {
-      await useSocial.getState().setNickname(result.value);
+      await onSave(result.value);
       setError(null);
       onDone?.();
     } catch (e) {

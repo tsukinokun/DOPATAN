@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
+import { PopButton } from "@/components/ui";
 
 /** 画面中央にドンと出る文字 */
 export function BigBanner({
@@ -83,6 +85,55 @@ export function ScorePopup({ popup }: { popup: { id: number; x: number; y: numbe
         >
           {popup.text}
         </motion.span>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/** ✕ を押したときの一時停止と「本当にやめる?」の確認。Esc でも続けられる */
+export function PauseDialog({ open, onResume, onQuit }: { open: boolean; onResume: () => void; onQuit: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onResume();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onResume]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-50 grid place-items-center bg-slate-900/70 px-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pause-title"
+          data-testid="pause-dialog"
+        >
+          <motion.div
+            className="pop-border flex w-full max-w-xs flex-col gap-4 rounded-3xl bg-white p-6 text-center text-slate-900"
+            initial={{ scale: 0.6, rotate: -4 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0.6, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 420, damping: 18 }}
+          >
+            <p className="text-4xl">⏸</p>
+            <h2 id="pause-title" className="text-2xl font-black">
+              一時停止中
+            </h2>
+            <p className="text-sm font-bold text-slate-600">本当にやめる?このプレイのスコアと報酬は残りません(覚えた単語の記録は残ります)。</p>
+            <PopButton color="yellow" onClick={onResume} className="text-xl" testId="pause-resume">
+              ▶ 続ける
+            </PopButton>
+            <PopButton color="white" onClick={onQuit} testId="pause-quit">
+              やめる
+            </PopButton>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

@@ -82,6 +82,19 @@ export function addSessionToDaily(d: DailyStats, s: SessionSummary): DailyStats 
   };
 }
 
+/** 今日までの days 日分の記録を古い順に並べる(遊ばなかった日は 0) */
+export function recentDays(
+  daily: Record<string, DailyStats>,
+  today: string,
+  days = 30,
+): { date: string; sessions: number; correct: number }[] {
+  return Array.from({ length: days }, (_, i) => {
+    const date = shiftDate(today, i - (days - 1));
+    const d = daily[date] ?? EMPTY_DAILY;
+    return { date, sessions: d.sessions, correct: d.correct };
+  });
+}
+
 export function mergeDaily(a: Record<string, DailyStats>, b: Record<string, DailyStats>): Record<string, DailyStats> {
   const merged = { ...b };
   for (const [date, d] of Object.entries(a)) {
