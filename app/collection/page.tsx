@@ -102,6 +102,7 @@ function Skins() {
                             <button
                               type="button"
                               aria-label={`${skin.name} を試聴`}
+                              data-sfx="off"
                               onClick={() => preview(skin.look, skinOf("sound", equipped.sound).look)}
                               className="rounded-lg border-2 border-slate-900 px-2 text-xs"
                             >

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { M_PLUS_Rounded_1c } from "next/font/google";
 import { AuthSync } from "@/components/AuthSync";
+import { UiSounds } from "@/components/UiSounds";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { SkinApplier } from "@/components/SkinApplier";
 import { SocialSync } from "@/components/social/SocialSync";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SkinApplier />
         <SocialSync />
         <ServiceWorker />
+        <UiSounds />
       </body>
     </html>
   );

@@ -108,6 +108,20 @@ export const sfx = {
       play({ freq: semitone(523, s), duration: 0.22, type: "square", volume: 0.16, delay: i * 0.12 }),
     );
   },
+  /** ボタンやリンクを押したときの軽い音 */
+  tap() {
+    play({ freq: 880, duration: 0.05, type: "triangle", volume: 0.1, slideTo: 1175 });
+  },
+  /** 戻るボタン(下がる音) */
+  back() {
+    play({ freq: 784, duration: 0.07, type: "triangle", volume: 0.1, slideTo: 523 });
+  },
+  /** オン・オフの切り替え。オンは上がる2音、オフは下がる2音 */
+  toggle(on: boolean) {
+    const [a, b] = on ? [659, 988] : [659, 440];
+    play({ freq: a, duration: 0.05, type: "square", volume: 0.07 });
+    play({ freq: b, duration: 0.08, type: "square", volume: 0.07, delay: 0.05 });
+  },
   coin() {
     play({ freq: 988, duration: 0.08, type: "square", volume: 0.12 });
     play({ freq: 1319, duration: 0.25, type: "square", volume: 0.12, delay: 0.08 });

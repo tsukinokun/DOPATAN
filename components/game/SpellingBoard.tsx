@@ -71,7 +71,7 @@ export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPi
 
   const revealed = feedback && !feedback.correct;
   return (
-    <div className="flex flex-1 flex-col items-center justify-between gap-6 px-4 pb-8 pt-4" data-testid="spelling-board">
+    <div className="flex flex-1 flex-col items-center justify-between gap-6 px-4 pb-8 pt-4" data-testid="spelling-board" data-sfx="off">
       <div className="h-40 w-40">
         <PictureCard sense={question.target} showJapanese={showJapanese} size="lg" />
       </div>
