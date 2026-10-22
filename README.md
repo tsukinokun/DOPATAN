@@ -86,4 +86,4 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 2. ✅ Supabase でログインし、進み具合をクラウドに保存(Google / メール / ゲスト。Apple・X・LINE は後で追加)
 3. ✅ コイン・ジェム、ガチャ、スキン、デイリーミッション、実績
 4. ✅ XP・ランク、週ごとのリーグ制ランキング、フレンド、招待、応援
-5. 🚧 単語を約4,000語に増やす(帯ごとに追加中)。✅ 絵(Fluent Emoji+自作SVG)、✅ 発音音声(Kokoro)、✅ リスニングとつづり並べ替え
+5. 🚧 単語を約4,000語に増やす(帯ごとに追加中:600点帯 ✅ 約1,200語)。✅ 絵(Fluent Emoji+自作SVG)、✅ 発音音声(Kokoro)、✅ リスニングとつづり並べ替え

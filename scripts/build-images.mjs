@@ -38,9 +38,13 @@ function fluentFile(emoji) {
   for (const key of candidates) {
     const info = names[key];
     if (!info) continue;
-    const slug = info.slug.replace(/_/g, "-");
-    for (const file of [`${slug}.svg`, `${slug}-default.svg`]) {
-      if (existsSync(join(fluentDir, file))) return { slug, file };
+    // Fluent のファイル名は、アポストロフィを詰める(nine-oclock)・people を person にする、などの違いがある
+    const base = info.name.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const slugs = [info.slug.replace(/_/g, "-"), base, base.replace(/^people-/, "person-")];
+    for (const slug of slugs) {
+      for (const file of [`${slug}.svg`, `${slug}-default.svg`]) {
+        if (existsSync(join(fluentDir, file))) return { slug, file };
+      }
     }
   }
   return null;
