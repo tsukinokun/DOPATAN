@@ -3,7 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { getSupabase } from "@/lib/supabase/client";
+import { NicknameForm } from "@/components/social/common";
+import { displayName } from "@/lib/social/names";
 import { useAuth, type SyncState } from "@/stores/auth";
+import { useSocial } from "@/stores/social";
 
 export default function AccountPage() {
   return (
@@ -48,20 +51,44 @@ function Account() {
   }
   if (status === "signedIn") {
     return (
-      <Panel className="flex flex-col gap-3">
-        <p className="text-sm text-slate-500">ログイン中</p>
-        <p className="break-all text-lg font-black" data-testid="account-email">
-          {email ?? "(メールアドレスなし)"}
-        </p>
-        <p className="text-sm font-black">{SYNC_LABEL[syncState]}</p>
-        <p className="text-xs text-slate-500">同じアカウントでログインすれば、PCでもスマホでも同じ記録で遊べます。</p>
-        <PopButton color="white" onClick={() => void getSupabase()?.auth.signOut()} testId="sign-out">
-          ログアウト
-        </PopButton>
-      </Panel>
+      <>
+        <NicknamePanel />
+        <Panel className="flex flex-col gap-3">
+          <p className="text-sm text-slate-500">ログイン中</p>
+          <p className="break-all text-lg font-black" data-testid="account-email">
+            {email ?? "(メールアドレスなし)"}
+          </p>
+          <p className="text-sm font-black">{SYNC_LABEL[syncState]}</p>
+          <p className="text-xs text-slate-500">同じアカウントでログインすれば、PCでもスマホでも同じ記録で遊べます。</p>
+          <PopButton color="white" onClick={() => void getSupabase()?.auth.signOut()} testId="sign-out">
+            ログアウト
+          </PopButton>
+        </Panel>
+      </>
     );
   }
   return <SignInForms />;
+}
+
+function NicknamePanel() {
+  const profile = useSocial((s) => s.profile);
+  const [saved, setSaved] = useState(false);
+  return (
+    <Panel className="flex flex-col gap-2">
+      <h2 className="font-black">ニックネーム</h2>
+      {profile ? (
+        <>
+          <p className="text-sm text-slate-500">
+            今の表示:{displayName(profile)}(フレンドコード {profile.friendCode})
+          </p>
+          <NicknameForm key={profile.nickname ?? ""} onDone={() => setSaved(true)} />
+          {saved && <p className="text-sm font-black text-emerald-700">保存しました</p>}
+        </>
+      ) : (
+        <p className="text-sm text-slate-500">読み込み中…</p>
+      )}
+    </Panel>
+  );
 }
 
 /** Supabase の英語のエラーを日本語にする */

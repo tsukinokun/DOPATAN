@@ -7,6 +7,8 @@ import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
 import { POS_LABEL } from "@/lib/types";
 import { WORDS } from "@/lib/words";
 import { RewardList } from "@/components/economy/RewardList";
+import { totalXp, type LedgerEvent } from "@/lib/economy/ledger";
+import { levelFromXp, rankFor } from "@/lib/economy/rewards";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { useWallet } from "@/stores/wallet";
 import { useProgress, type SessionResult } from "@/stores/progress";
@@ -76,6 +78,7 @@ function ResultView({ result }: { result: SessionResult }) {
         </div>
       </Panel>
 
+      <LevelUp events={rewards} />
       <RewardList events={rewards} />
 
       <div className="flex gap-3">
@@ -155,5 +158,36 @@ function Mini({ label, value }: { label: string; value: string }) {
       <span className="text-xs font-black text-slate-500">{label}</span>
       <span className="text-xl font-black">{value}</span>
     </div>
+  );
+}
+
+/** このプレイでレベルが上がったときだけ出る */
+function LevelUp({ events }: { events: LedgerEvent[] }) {
+  const ledger = useWallet((s) => s.ledger);
+  const gained = events.reduce((sum, e) => sum + (e.xp ?? 0), 0);
+  const total = totalXp(ledger);
+  const before = levelFromXp(total - gained);
+  const after = levelFromXp(total);
+  if (gained === 0 || after <= before) return null;
+  const rank = rankFor(after);
+  const rankUp = rankFor(before).title !== rank.title;
+  return (
+    <motion.div
+      initial={{ scale: 0, rotate: -20 }}
+      animate={{ scale: 1, rotate: -3 }}
+      transition={{ delay: 0.6, type: "spring", stiffness: 300, damping: 12 }}
+      className="pop-border flex flex-col items-center rounded-3xl bg-slate-900 py-3 text-center"
+      data-testid="level-up"
+    >
+      <span className="rainbow-text text-4xl font-black">LEVEL UP!</span>
+      <span className="text-xl font-black text-white">
+        Lv.{before} → Lv.{after}
+      </span>
+      {rankUp && (
+        <span className="text-lg font-black text-yellow-300">
+          {rank.emoji} ランクアップ:{rank.title}
+        </span>
+      )}
+    </motion.div>
   );
 }

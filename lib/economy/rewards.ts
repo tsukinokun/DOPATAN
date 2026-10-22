@@ -38,6 +38,38 @@ export function sessionCoins(s: SessionSummary): number {
   return 10 + s.correct * 2 + s.maxCombo + s.feverCount * 10;
 }
 
+/** 1回のプレイで得る XP。サーバーは1回あたり600までしか受け付けない */
+export function sessionXp(s: SessionSummary): number {
+  return Math.min(600, 10 + s.correct * 3 + s.maxCombo + s.feverCount * 15);
+}
+
+// ---- レベルとランク ----
+
+export function levelFromXp(xp: number): number {
+  return Math.floor(Math.sqrt(Math.max(0, xp) / 50)) + 1;
+}
+
+/** そのレベルになるのに必要な合計 XP */
+export function xpForLevel(level: number): number {
+  return 50 * (level - 1) ** 2;
+}
+
+export const RANKS: readonly { minLevel: number; title: string; emoji: string }[] = [
+  { minLevel: 1, title: "見習い", emoji: "🐣" },
+  { minLevel: 3, title: "ルーキー", emoji: "🌱" },
+  { minLevel: 6, title: "単語ハンター", emoji: "🏹" },
+  { minLevel: 10, title: "ボキャ戦士", emoji: "⚔️" },
+  { minLevel: 15, title: "スコア職人", emoji: "🛠️" },
+  { minLevel: 20, title: "TOEIC番長", emoji: "😎" },
+  { minLevel: 30, title: "ボキャ賢者", emoji: "🧙" },
+  { minLevel: 40, title: "単語王", emoji: "👑" },
+  { minLevel: 50, title: "単語神", emoji: "🌟" },
+];
+
+export function rankFor(level: number): (typeof RANKS)[number] {
+  return [...RANKS].reverse().find((r) => level >= r.minLevel)!;
+}
+
 export function addSessionToDaily(d: DailyStats, s: SessionSummary): DailyStats {
   const total = s.correct + s.wrong;
   return {

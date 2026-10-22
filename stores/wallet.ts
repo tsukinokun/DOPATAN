@@ -12,6 +12,7 @@ import {
   longestStreak,
   pendingRewards,
   sessionCoins,
+  sessionXp,
   type AchievementContext,
   type DailyStats,
   type SessionSummary,
@@ -35,6 +36,8 @@ type WalletStore = WalletData & {
   /** 通貨が足りなければ null */
   pull: (kind: GachaKind, count: 1 | 10, rng: () => number, now?: number) => GachaResult[] | null;
   equip: (category: SkinCategory, id: string) => void;
+  /** サーバーで決まった報酬(リーグ・招待・応援)を台帳に入れる。入れたばかりのものを返す */
+  grantServerRewards: (events: LedgerEvent[]) => LedgerEvent[];
 };
 
 const DAILY_KEEP_DAYS = 30;
@@ -122,6 +125,7 @@ export const useWallet = create<WalletStore>()(
           label: "プレイ報酬",
           coins: sessionCoins(summary),
           fevers: summary.feverCount,
+          xp: sessionXp(summary),
         };
         const daily = pruneDaily({
           ...state.daily,
@@ -158,6 +162,13 @@ export const useWallet = create<WalletStore>()(
         ];
         set({ ledger: withEvents(state.ledger, events) });
         return results;
+      },
+
+      grantServerRewards: (events) => {
+        const state = get();
+        const fresh = events.filter((e) => !state.ledger[e.id]);
+        if (fresh.length > 0) set({ ledger: withEvents(state.ledger, fresh) });
+        return fresh;
       },
 
       equip: (category, id) => {

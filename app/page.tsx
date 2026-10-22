@@ -10,7 +10,9 @@ import { filterScope, WORDS } from "@/lib/words";
 import { CurrencyBar } from "@/components/economy/CurrencyBar";
 import { DailyMissions } from "@/components/economy/DailyMissions";
 import { LoginBonus } from "@/components/economy/LoginBonus";
+import { LevelBar, SocialNotices } from "@/components/social/common";
 import { Chip, Hydrated, Panel, PopButton } from "@/components/ui";
+import { useSocial } from "@/stores/social";
 import { useProgress } from "@/stores/progress";
 import { useAuth } from "@/stores/auth";
 import { useSettings } from "@/stores/settings";
@@ -55,6 +57,7 @@ function Home() {
       </header>
 
       <CurrencyBar now={now} />
+      <LevelBar />
 
       <Panel className="grid grid-cols-3 gap-2 text-center">
         <Stat label="学習した" value={`${learned}`} unit={`/ ${scope.length}`} />
@@ -86,6 +89,10 @@ function Home() {
         <PopButton href="/collection" color="mint" className="whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-collection">
           🎒 コレクション
         </PopButton>
+        <PopButton href="/league" color="yellow" className="whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-league">
+          🏆 リーグ
+        </PopButton>
+        <FriendsButton />
       </div>
 
       <DailyMissions now={now} />
@@ -120,6 +127,7 @@ function Home() {
       </Panel>
 
       <LoginBonus />
+      <SocialNotices />
     </main>
   );
 }
@@ -153,6 +161,21 @@ function AccountButton() {
   return (
     <PopButton href="/account" color="white" className="px-3 py-2" testId="open-account">
       {status === "signedIn" ? "☁️" : "👤"}
+    </PopButton>
+  );
+}
+
+/** 届いた申請があれば数を出す */
+function FriendsButton() {
+  const incoming = useSocial((s) => s.inbox?.incomingRequests.length ?? 0);
+  return (
+    <PopButton href="/friends" color="white" className="relative whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-friends">
+      👥 フレンド
+      {incoming > 0 && (
+        <span className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border-2 border-slate-900 bg-pink-500 text-sm text-white">
+          {incoming}
+        </span>
+      )}
     </PopButton>
   );
 }

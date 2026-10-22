@@ -27,12 +27,14 @@ export function RewardList({ events }: { events: LedgerEvent[] }) {
   if (events.length === 0) return null;
   const coins = events.reduce((sum, e) => sum + (e.coins ?? 0), 0);
   const gems = events.reduce((sum, e) => sum + (e.gems ?? 0), 0);
+  const xp = events.reduce((sum, e) => sum + (e.xp ?? 0), 0);
 
   return (
     <Panel className="flex flex-col gap-2" >
       <div className="flex items-baseline justify-between">
         <h2 className="font-black">獲得した報酬</h2>
         <span className="font-black" data-testid="reward-total">
+          {xp > 0 && <span className="mr-2">⭐+{xp}XP</span>}
           {coins > 0 && <span className="mr-2">🪙+{coins}</span>}
           {gems > 0 && <span>💎+{gems}</span>}
         </span>

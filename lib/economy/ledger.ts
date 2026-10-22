@@ -14,6 +14,8 @@ export type LedgerEvent = {
   skin?: string;
   /** プレイ報酬のときのフィーバー回数(実績の判定に使う) */
   fevers?: number;
+  /** プレイ報酬のときの XP(レベルの計算に使う) */
+  xp?: number;
 };
 
 export type Ledger = Record<string, LedgerEvent>;
@@ -36,6 +38,17 @@ export function ownedSkins(ledger: Ledger): Set<string> {
 
 export function totalFevers(ledger: Ledger): number {
   return Object.values(ledger).reduce((sum, e) => sum + (e.fevers ?? 0), 0);
+}
+
+/** XP の記録が無い古いプレイ報酬(フェーズ4より前)は、コインから見積もる */
+const LEGACY_XP_PER_COIN = 1.4;
+
+export function totalXp(ledger: Ledger): number {
+  return Object.values(ledger).reduce((sum, e) => {
+    if (e.xp !== undefined) return sum + e.xp;
+    if (e.id.startsWith("session:")) return sum + Math.round((e.coins ?? 0) * LEGACY_XP_PER_COIN);
+    return sum;
+  }, 0);
 }
 
 /** ID で重ね合わせる。何度合わせても結果は同じ */
