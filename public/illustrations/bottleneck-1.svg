@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- ボトルネック:たくさんの箱が細い口に詰まって、1つずつしか通れない -->
+  <path d="M3 3h26l-9 13v4h-8v-4Z" fill="#B4ACBC"/>
+  <path d="M5.5 4.5h21l-7.6 11h-5.8Z" fill="#E1D8EC"/>
+  <rect x="7" y="5.5" width="4" height="4" rx=".8" fill="#FF822D"/>
+  <rect x="12" y="5" width="4" height="4" rx=".8" fill="#00A6ED"/>
+  <rect x="17" y="5.5" width="4" height="4" rx=".8" fill="#00D26A"/>
+  <rect x="21.5" y="5.2" width="3.5" height="3.5" rx=".8" fill="#FFC83D"/>
+  <rect x="10" y="9.8" width="4" height="4" rx=".8" fill="#F92F60"/>
+  <rect x="14.5" y="10" width="4" height="4" rx=".8" fill="#8D65C5"/>
+  <rect x="14" y="16.5" width="4" height="3" rx=".7" fill="#00A6ED"/>
+  <rect x="14" y="24" width="4" height="4" rx=".8" fill="#FF822D"/>
+  <path d="M16 20.5v2.6m-1.6-1.4 1.6 1.6 1.6-1.6" stroke="#636363" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

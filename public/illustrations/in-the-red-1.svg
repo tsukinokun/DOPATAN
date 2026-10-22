@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 赤字:帳簿に赤い「−」と下向きの線 -->
+  <rect x="4" y="2.5" width="24" height="27" rx="2.5" fill="#F3EEF8"/>
+  <rect x="4" y="2.5" width="24" height="5" rx="2.5" fill="#F92F60"/>
+  <path d="M8 12h16M8 16.5h16M8 21h16" stroke="#D3D3D3" stroke-width="1"/>
+  <path d="M8 13l5 5 4-3 7 9" stroke="#F92F60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M21 9.8h4" stroke="#F92F60" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

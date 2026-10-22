@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 兼ね合い:シーソーの片側に値札(安さ)、反対側に星(品質) -->
+  <path d="M16 18 12 28h8Z" fill="#9B9B9B"/>
+  <rect x="2" y="14.5" width="28" height="2.4" rx="1.2" fill="#A56953" transform="rotate(-12 16 15.7)"/>
+  <path d="M4 9.5 8.5 7l4 4.2-4.6 4.4L3.6 11Z" fill="#FFC83D"/>
+  <circle cx="6.7" cy="10" r="1" fill="#fff"/>
+  <path d="m24 4.5 1.4 2.9 3.2.5-2.3 2.2.6 3.2-2.9-1.5-2.9 1.5.6-3.2-2.3-2.2 3.2-.5Z" fill="#FFB02E"/>
+  <path d="M14.5 21.5h3" stroke="#fff" stroke-width="1" stroke-linecap="round"/>
+</svg>
