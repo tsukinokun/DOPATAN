@@ -80,7 +80,7 @@ function Home() {
           ▶ PLAY
         </PopButton>
       </motion.div>
-      <p className="-mt-3 text-center text-sm font-black text-white">1回3分・スワイプで答えよう</p>
+      <p className="-mt-3 text-center text-sm font-black text-white">1回90秒・スワイプで答えよう</p>
 
       <div className="grid grid-cols-2 gap-3">
         <PopButton href="/gacha" color="pink" className="whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-gacha">

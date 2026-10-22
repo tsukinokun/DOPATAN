@@ -46,7 +46,7 @@ const RAMP_EXPOSURES = 3;
 const REQUEUE_GAP = 2;
 
 /**
- * 1回のプレイ(3分)の出題順を決める。
+ * 1回のプレイ(90秒)の出題順を決める。
  * 間違えた単語と覚えている途中の単語は数問後に再出題し、その合間に復習と新しい単語を混ぜる。
  */
 export class SessionEngine {

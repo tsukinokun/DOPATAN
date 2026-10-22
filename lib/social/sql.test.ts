@@ -65,6 +65,7 @@ beforeAll(async () => {
   await db.exec(migration("0001_init.sql"));
   await db.exec(migration("0002_wallet.sql"));
   await db.exec(migration("0003_social.sql"));
+  await db.exec(migration("0004_short_sessions.sql"));
   // Supabase の「Automatically expose new tables」がオンの状態を再現する(RLS だけで守れているかを見る)
   await db.exec(`grant usage on schema public to authenticated; grant all on all tables in schema public to authenticated;`);
 }, 60_000);
@@ -76,6 +77,7 @@ beforeEach(async () => {
 describe("migration", () => {
   it("can be run again without errors", async () => {
     await db.exec(migration("0003_social.sql"));
+    await db.exec(migration("0004_short_sessions.sql"));
   });
 });
 
@@ -119,7 +121,7 @@ describe("xp and leagues", () => {
     expect(first).toMatchObject({ accepted: 600, weekXp: 600 });
     await setNow("2026-10-19T12:01:00+09:00");
     await expect(rpc(u, "submit_xp", [100])).rejects.toThrow(/too_soon/);
-    await setNow("2026-10-19T12:03:00+09:00");
+    await setNow("2026-10-19T12:01:21+09:00"); // 80秒あければ受け付ける(1回90秒のプレイを続けて遊べる)
     expect((await rpc<{ weekXp: number }>(u, "submit_xp", [100])).weekXp).toBe(700);
     expect((await rpc<{ accepted: number }>(u, "submit_xp", [-50]).catch(() => null))).toBeNull();
   });

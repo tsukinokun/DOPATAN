@@ -93,12 +93,12 @@ test("Japanese can be hidden from the settings", async ({ page }) => {
   await expect(page.getByTestId("card-ja")).toHaveCount(0);
 });
 
-test("the session ends after 3 minutes and shows the result", async ({ page }) => {
+test("the session ends after 90 seconds and shows the result", async ({ page }) => {
   await page.clock.install();
   await startGame(page);
   await dragTo(page, "drop-correct");
   await page.waitForTimeout(800);
-  await page.clock.fastForward("03:01");
+  await page.clock.fastForward("01:31");
   await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
   await expect(page.getByTestId("result-words").locator("li")).not.toHaveCount(0);
 });
@@ -116,4 +116,27 @@ test("works as guest-only without Supabase settings", async ({ page }) => {
   await expect(page.getByTestId("open-account")).toHaveCount(0);
   await page.goto("/account");
   await expect(page.getByText("ログイン機能は準備中です。")).toBeVisible();
+});
+
+test("quitting and playing again starts a fresh 90-second game", async ({ page }) => {
+  await startGame(page);
+  await page.waitForTimeout(4000);
+  const before = Number(await page.getByTestId("timer").textContent());
+  expect(before).toBeLessThanOrEqual(87);
+  await page.getByRole("button", { name: "やめる" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.getByTestId("play").click({ force: true });
+  await waitForQuestion(page);
+  expect(Number(await page.getByTestId("timer").textContent())).toBeGreaterThanOrEqual(88);
+  await expect(page.getByTestId("score")).toHaveText("0");
+});
+
+test("the play screen blocks pull-to-refresh and page scrolling", async ({ page }) => {
+  await startGame(page);
+  const styles = await page.evaluate(() => ({
+    html: getComputedStyle(document.documentElement).overscrollBehaviorY,
+    body: getComputedStyle(document.body).overscrollBehaviorY,
+    main: getComputedStyle(document.querySelector("main")!).touchAction,
+  }));
+  expect(styles).toEqual({ html: "none", body: "none", main: "none" });
 });

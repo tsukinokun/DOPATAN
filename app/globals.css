@@ -21,6 +21,8 @@ body {
 /* 背景が届かない部分(長いページの下端など)が白くならないように */
 html {
   background-color: var(--bg-to);
+  /* スマホの「引っ張って更新」はルート(html)の設定で決まるので、ここでも止める */
+  overscroll-behavior: none;
 }
 
 body {

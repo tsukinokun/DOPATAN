@@ -21,7 +21,7 @@ function Board(props: React.ComponentProps<typeof QuestionBoard>) {
   return props.question.mode === "spelling" ? <SpellingBoard {...props} /> : <QuestionBoard {...props} />;
 }
 
-export const SESSION_MS = 3 * 60 * 1000;
+export const SESSION_MS = 90 * 1000;
 const FEVER_MS = 8000;
 const NEXT_DELAY_CORRECT = 650;
 const NEXT_DELAY_WRONG = 1500;
@@ -253,8 +253,9 @@ export function PlayScreen() {
     [combo, engine, feedback, fever, later, level, phase, playSound, presentQuestion, question, recordAnswer, shake, showBanner, startFever],
   );
 
+  // スワイプ中にブラウザの「引っ張って更新」やスクロールが起きないよう、画面全体のタッチ操作を止める
   return (
-    <motion.main animate={shake} className="relative flex min-h-dvh flex-col">
+    <motion.main animate={shake} className="relative flex min-h-dvh touch-none flex-col overscroll-none">
       <FeverOverlay active={fever} intense={level === "max"} />
       <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col">
         <Hud
