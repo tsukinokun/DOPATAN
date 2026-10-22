@@ -7,6 +7,9 @@ import { unlockAudio } from "@/lib/fx/audio";
 import { isDue, isMastered } from "@/lib/srs";
 import { SCORE_BANDS, THEMES, type Theme } from "@/lib/types";
 import { filterScope, WORDS } from "@/lib/words";
+import { CurrencyBar } from "@/components/economy/CurrencyBar";
+import { DailyMissions } from "@/components/economy/DailyMissions";
+import { LoginBonus } from "@/components/economy/LoginBonus";
 import { Chip, Hydrated, Panel, PopButton } from "@/components/ui";
 import { useProgress } from "@/stores/progress";
 import { useAuth } from "@/stores/auth";
@@ -51,6 +54,8 @@ function Home() {
         </div>
       </header>
 
+      <CurrencyBar now={now} />
+
       <Panel className="grid grid-cols-3 gap-2 text-center">
         <Stat label="学習した" value={`${learned}`} unit={`/ ${scope.length}`} />
         <Stat label="マスター" value={`${mastered}`} unit="語" />
@@ -73,6 +78,17 @@ function Home() {
         </PopButton>
       </motion.div>
       <p className="-mt-3 text-center text-sm font-black text-white">1回3分・スワイプで答えよう</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <PopButton href="/gacha" color="pink" className="whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-gacha">
+          🎰 ガチャ
+        </PopButton>
+        <PopButton href="/collection" color="mint" className="whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-collection">
+          🎒 コレクション
+        </PopButton>
+      </div>
+
+      <DailyMissions now={now} />
 
       <Panel className="flex flex-col gap-3">
         <h2 className="font-black">出題範囲</h2>
@@ -102,6 +118,8 @@ function Home() {
         <Stat label="ハイスコア" value={bestScore.toLocaleString()} />
         <Stat label="最大コンボ" value={`${bestCombo}`} />
       </Panel>
+
+      <LoginBonus />
     </main>
   );
 }

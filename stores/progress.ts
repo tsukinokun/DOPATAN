@@ -11,6 +11,8 @@ export type SessionResult = {
   correct: number;
   wrong: number;
   feverCount: number;
+  /** 新しく紹介した単語の数 */
+  newWords: number;
   answers: AnswerLog[];
   finishedAt: number;
   /** finishSession が記録更新かどうかを判定して入れる */

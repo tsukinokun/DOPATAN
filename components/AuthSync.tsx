@@ -9,6 +9,8 @@ import { useAuth } from "@/stores/auth";
 import { useStoresHydrated } from "@/stores/hydration";
 import { useProgress } from "@/stores/progress";
 import { DEFAULT_SETTINGS, useSettings, type Settings } from "@/stores/settings";
+import { EMPTY_WALLET } from "@/lib/economy/walletData";
+import { useWallet, walletSnapshot } from "@/stores/wallet";
 
 const SAVE_DELAY_MS = 2000;
 
@@ -19,17 +21,20 @@ function snapshot(): SyncedData<Settings> {
     progress,
     stats: { sessions, bestScore, bestCombo },
     settings: { showJapanese, effectIntensity, sound, bgm, vibration, modes, bands, themes },
+    wallet: walletSnapshot(),
   };
 }
 
 function apply(data: SyncedData<Settings>) {
   useProgress.setState({ progress: data.progress, ...data.stats });
   if (data.settings) useSettings.setState({ ...DEFAULT_SETTINGS, ...data.settings });
+  if (data.wallet) useWallet.setState(data.wallet);
 }
 
 function clearLocal() {
   useProgress.setState({ progress: {}, sessions: 0, bestScore: 0, bestCombo: 0, lastResult: null });
   useSettings.setState(DEFAULT_SETTINGS);
+  useWallet.setState({ ...EMPTY_WALLET, lastRewards: [] });
 }
 
 /**
@@ -118,6 +123,7 @@ export function AuthSync() {
       }
     });
     const unsubSettings = useSettings.subscribe(scheduleSave);
+    const unsubWallet = useWallet.subscribe(scheduleSave);
     const flush = () => {
       if (saveTimer) void save();
     };
@@ -127,6 +133,7 @@ export function AuthSync() {
       data.subscription.unsubscribe();
       unsubProgress();
       unsubSettings();
+      unsubWallet();
       window.removeEventListener("pagehide", flush);
       if (saveTimer) clearTimeout(saveTimer);
     };

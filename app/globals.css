@@ -5,6 +5,8 @@
   --bg-from: #7b2ff7;
   --bg-via: #f107a3;
   --bg-to: #ff9a3c;
+  /* 背景スキンの模様(SkinApplier が差し替える) */
+  --bg-pattern: none;
 }
 
 @theme inline {
@@ -13,11 +15,18 @@
 
 html,
 body {
-  height: 100%;
+  min-height: 100%;
+}
+
+/* 背景が届かない部分(長いページの下端など)が白くならないように */
+html {
+  background-color: var(--bg-to);
 }
 
 body {
-  background: linear-gradient(160deg, var(--bg-from), var(--bg-via) 55%, var(--bg-to));
+  background:
+    var(--bg-pattern),
+    linear-gradient(160deg, var(--bg-from), var(--bg-via) 55%, var(--bg-to));
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-sans);

@@ -1,3 +1,5 @@
+import { skinOf, type SoundLook } from "@/lib/skins";
+
 /**
  * 効果音と BGM を Web Audio API で合成する(素材ファイル不要)。
  * 本番用の音源ができたら、ここを差し替える。
@@ -52,46 +54,63 @@ function tone({ freq, duration, type = "square", volume = 0.2, delay = 0, slideT
 
 const semitone = (base: number, steps: number) => base * Math.pow(2, steps / 12);
 
+let soundLook: SoundLook = skinOf("sound", undefined).look;
+
+/** 装備中の効果音セット(SkinApplier が設定する) */
+export function setSoundSkin(look: SoundLook): void {
+  soundLook = look;
+}
+
+/** 効果音を装備中の効果音セットの音色で鳴らす */
+function play(options: ToneOptions) {
+  const { wave, pitch, original, layer, sparkle } = soundLook;
+  const freq = options.freq * pitch;
+  const slideTo = options.slideTo && options.slideTo * pitch;
+  tone({ ...options, freq, slideTo, type: original ? options.type : wave });
+  if (layer) tone({ ...options, freq: freq * 2, slideTo: slideTo && slideTo * 2, type: layer, volume: (options.volume ?? 0.2) * 0.35 });
+  if (sparkle) tone({ ...options, freq: freq * 3, type: "sine", volume: (options.volume ?? 0.2) * 0.25, delay: (options.delay ?? 0) + 0.04 });
+}
+
 export const sfx = {
   /** コンボが続くほど音程が上がる */
   correct(combo: number) {
     const base = semitone(660, Math.min(combo, 24));
-    tone({ freq: base, duration: 0.12, type: "square", volume: 0.15 });
-    tone({ freq: base * 1.5, duration: 0.18, type: "triangle", volume: 0.2, delay: 0.07 });
+    play({ freq: base, duration: 0.12, type: "square", volume: 0.15 });
+    play({ freq: base * 1.5, duration: 0.18, type: "triangle", volume: 0.2, delay: 0.07 });
   },
   wrong() {
-    tone({ freq: 220, duration: 0.3, type: "sawtooth", volume: 0.18, slideTo: 90 });
+    play({ freq: 220, duration: 0.3, type: "sawtooth", volume: 0.18, slideTo: 90 });
   },
   pickup() {
-    tone({ freq: 520, duration: 0.06, type: "sine", volume: 0.12, slideTo: 780 });
+    play({ freq: 520, duration: 0.06, type: "sine", volume: 0.12, slideTo: 780 });
   },
   intro() {
     [0, 4, 7, 12].forEach((s, i) =>
-      tone({ freq: semitone(523, s), duration: 0.15, type: "triangle", volume: 0.18, delay: i * 0.06 }),
+      play({ freq: semitone(523, s), duration: 0.15, type: "triangle", volume: 0.18, delay: i * 0.06 }),
     );
   },
   comboMilestone() {
     [0, 4, 7, 12, 16].forEach((s, i) =>
-      tone({ freq: semitone(784, s), duration: 0.12, type: "square", volume: 0.12, delay: i * 0.05 }),
+      play({ freq: semitone(784, s), duration: 0.12, type: "square", volume: 0.12, delay: i * 0.05 }),
     );
   },
   fever() {
     for (let i = 0; i < 12; i++) {
-      tone({ freq: semitone(440, i * 2), duration: 0.1, type: "square", volume: 0.14, delay: i * 0.035 });
+      play({ freq: semitone(440, i * 2), duration: 0.1, type: "square", volume: 0.14, delay: i * 0.035 });
     }
-    tone({ freq: 1760, duration: 0.6, type: "sawtooth", volume: 0.1, delay: 0.42 });
+    play({ freq: 1760, duration: 0.6, type: "sawtooth", volume: 0.1, delay: 0.42 });
   },
   countdown(final: boolean) {
-    tone({ freq: final ? 1320 : 660, duration: final ? 0.4 : 0.15, type: "square", volume: 0.18 });
+    play({ freq: final ? 1320 : 660, duration: final ? 0.4 : 0.15, type: "square", volume: 0.18 });
   },
   timeUp() {
     [12, 7, 4, 0].forEach((s, i) =>
-      tone({ freq: semitone(523, s), duration: 0.22, type: "square", volume: 0.16, delay: i * 0.12 }),
+      play({ freq: semitone(523, s), duration: 0.22, type: "square", volume: 0.16, delay: i * 0.12 }),
     );
   },
   coin() {
-    tone({ freq: 988, duration: 0.08, type: "square", volume: 0.12 });
-    tone({ freq: 1319, duration: 0.25, type: "square", volume: 0.12, delay: 0.08 });
+    play({ freq: 988, duration: 0.08, type: "square", volume: 0.12 });
+    play({ freq: 1319, duration: 0.25, type: "square", volume: 0.12, delay: 0.08 });
   },
 };
 

@@ -6,7 +6,9 @@ import { speak } from "@/lib/fx/audio";
 import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
 import { POS_LABEL } from "@/lib/types";
 import { WORDS } from "@/lib/words";
+import { RewardList } from "@/components/economy/RewardList";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
+import { useWallet } from "@/stores/wallet";
 import { useProgress, type SessionResult } from "@/stores/progress";
 
 export default function ResultPage() {
@@ -34,6 +36,7 @@ function Result() {
 
 function ResultView({ result }: { result: SessionResult }) {
   const level = useEffectLevel();
+  const rewards = useWallet((s) => s.lastRewards);
   const total = result.correct + result.wrong;
   const accuracy = total === 0 ? 0 : Math.round((result.correct / total) * 100);
 
@@ -72,6 +75,8 @@ function ResultView({ result }: { result: SessionResult }) {
           <Mini label="フィーバー" value={`${result.feverCount}回`} />
         </div>
       </Panel>
+
+      <RewardList events={rewards} />
 
       <div className="flex gap-3">
         <PopButton href="/play" className="flex-1 text-xl" testId="play-again">

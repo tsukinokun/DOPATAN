@@ -16,8 +16,16 @@ async function waitForQuestion(page: Page) {
   await page.waitForTimeout(450);
 }
 
-async function startGame(page: Page) {
+/** ホームを開き、その日最初に出るログインボーナスを閉じる */
+export async function openHome(page: Page) {
   await page.goto("/");
+  const receive = page.getByTestId("login-bonus-receive");
+  await receive.click({ timeout: 5000 }).catch(() => {});
+  await expect(page.getByTestId("login-bonus")).toHaveCount(0);
+}
+
+async function startGame(page: Page) {
+  await openHome(page);
   await page.getByTestId("play").click({ force: true });
   await waitForQuestion(page);
 }
@@ -73,7 +81,7 @@ test("Japanese can be hidden from the settings", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-checked", "true");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-checked", "false");
-  await page.goto("/");
+  await openHome(page);
   await page.getByTestId("play").click({ force: true });
   await waitForQuestion(page);
   await expect(page.getByTestId("card-ja")).toHaveCount(0);
@@ -97,7 +105,7 @@ test("keyboard digits answer on desktop", async ({ page, isMobile }) => {
 });
 
 test("works as guest-only without Supabase settings", async ({ page }) => {
-  await page.goto("/");
+  await openHome(page);
   await expect(page.getByTestId("play")).toBeVisible();
   await expect(page.getByTestId("open-account")).toHaveCount(0);
   await page.goto("/account");

@@ -1,3 +1,4 @@
+import { mergeWallet, type WalletData } from "@/lib/economy/walletData";
 import type { SenseProgress } from "@/lib/srs";
 
 export type Stats = { sessions: number; bestScore: number; bestCombo: number };
@@ -7,6 +8,8 @@ export type SyncedData<S> = {
   stats: Stats;
   /** クラウドにまだ設定が無いときは null */
   settings: S | null;
+  /** 古いデータや、wallet 列を追加する前のデータでは null */
+  wallet: WalletData | null;
 };
 
 /** 同じ単語なら、たくさん出題された方(=より新しい記録)を残す */
@@ -33,5 +36,6 @@ export function mergeData<S>(local: SyncedData<S>, remote: SyncedData<S> | null)
       bestCombo: Math.max(local.stats.bestCombo, remote.stats.bestCombo),
     },
     settings: remote.settings ?? local.settings,
+    wallet: local.wallet ? mergeWallet(local.wallet, remote.wallet) : remote.wallet,
   };
 }

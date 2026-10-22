@@ -3,7 +3,24 @@
 import confetti from "canvas-confetti";
 import { useSyncExternalStore } from "react";
 import { useSettings } from "@/stores/settings";
+import { skinOf, type EffectLook } from "@/lib/skins";
 import type { EffectIntensity } from "@/lib/types";
+
+let effectLook: EffectLook = skinOf("effect", undefined).look;
+const emojiShapes = new Map<string, confetti.Shape>();
+
+/** 装備中の正解エフェクト(SkinApplier が設定する) */
+export function setEffectSkin(look: EffectLook): void {
+  effectLook = look;
+}
+
+function shapesFor(look: EffectLook): confetti.Shape[] | undefined {
+  if (!look.emojis) return undefined;
+  return look.emojis.map((text) => {
+    if (!emojiShapes.has(text)) emojiShapes.set(text, confetti.shapeFromText({ text, scalar: 2 }));
+    return emojiShapes.get(text)!;
+  });
+}
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
@@ -33,13 +50,17 @@ export function burstConfetti(
 ): void {
   const scale = PARTICLES[level];
   if (scale === 0) return;
+  const shapes = shapesFor(effectLook);
   void confetti({
-    particleCount: Math.round(60 * scale * power),
+    // 絵文字は1つが大きいので数を減らす
+    particleCount: Math.round(60 * scale * power * (shapes ? 0.5 : 1)),
     spread: 70 + 30 * power,
     startVelocity: 35 + 10 * power,
     origin,
-    colors: ["#ff3d7f", "#ffd23f", "#3ee6c1", "#7b5cff", "#2ec5ff"],
-    scalar: 1.1,
+    colors: effectLook.colors,
+    shapes,
+    scalar: shapes ? 2 : 1.1,
+    flat: shapes ? true : undefined,
     disableForReducedMotion: true,
   });
 }

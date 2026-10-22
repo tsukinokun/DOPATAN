@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { M_PLUS_Rounded_1c } from "next/font/google";
 import { AuthSync } from "@/components/AuthSync";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import { SkinApplier } from "@/components/SkinApplier";
 import "./globals.css";
 
 const rounded = M_PLUS_Rounded_1c({
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh">
         {children}
         <AuthSync />
+        <SkinApplier />
         <ServiceWorker />
       </body>
     </html>

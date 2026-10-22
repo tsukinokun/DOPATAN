@@ -9,6 +9,7 @@ import { SessionEngine, type Question } from "@/lib/session";
 import { filterScope, WORDS } from "@/lib/words";
 import { useProgress, type AnswerLog } from "@/stores/progress";
 import { useSettings } from "@/stores/settings";
+import { useWallet } from "@/stores/wallet";
 import { FEVER_EVERY, Hud } from "./Hud";
 import { BigBanner, FeverOverlay, ScorePopup } from "./Overlays";
 import { QuestionBoard, type Feedback } from "./QuestionBoard";
@@ -56,7 +57,7 @@ export function PlayScreen() {
   const [banner, setBanner] = useState<{ text: string; sub?: string; className?: string } | null>(null);
   const [popup, setPopup] = useState<{ id: number; x: number; y: number; text: string } | null>(null);
 
-  const stats = useRef({ maxCombo: 0, correct: 0, wrong: 0, feverCount: 0, answers: [] as AnswerLog[] });
+  const stats = useRef({ maxCombo: 0, correct: 0, wrong: 0, feverCount: 0, newWords: 0, answers: [] as AnswerLog[] });
   const scoreRef = useRef(0);
   const timeLeftRef = useRef(SESSION_MS);
   const bgm = useRef<Bgm | null>(null);
@@ -119,7 +120,10 @@ export function PlayScreen() {
     playSound(() => sfx.timeUp());
     showBanner({ text: "TIME UP!", className: "text-pink-300" }, TIME_UP_DELAY);
     later(() => {
-      finishSession({ score: scoreRef.current, ...stats.current, finishedAt: Date.now() });
+      const now = Date.now();
+      finishSession({ score: scoreRef.current, ...stats.current, finishedAt: now });
+      // 学習記録を更新した後に報酬を計算する(マスターした単語や実績の判定に使うため)
+      useWallet.getState().recordSession(stats.current, now);
       router.push("/result");
     }, TIME_UP_DELAY);
   }, [finishSession, later, playSound, router, showBanner]);
@@ -189,6 +193,7 @@ export function PlayScreen() {
 
       if (correct) {
         stats.current.correct++;
+        if (question.isIntro) stats.current.newWords++;
         const nextCombo = question.isIntro ? combo : combo + 1;
         const points = pointsFor(nextCombo, fever, question.isIntro);
         scoreRef.current += points;

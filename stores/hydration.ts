@@ -3,20 +3,23 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useProgress } from "./progress";
 import { useSettings } from "./settings";
+import { useWallet } from "./wallet";
 
 let rehydrating: Promise<unknown> | null = null;
 
 function subscribe(onChange: () => void) {
   const unsubSettings = useSettings.persist.onFinishHydration(onChange);
   const unsubProgress = useProgress.persist.onFinishHydration(onChange);
+  const unsubWallet = useWallet.persist.onFinishHydration(onChange);
   return () => {
     unsubSettings();
     unsubProgress();
+    unsubWallet();
   };
 }
 
 function isHydrated() {
-  return useSettings.persist.hasHydrated() && useProgress.persist.hasHydrated();
+  return useSettings.persist.hasHydrated() && useProgress.persist.hasHydrated() && useWallet.persist.hasHydrated();
 }
 
 /**
@@ -28,7 +31,11 @@ export function useStoresHydrated(): boolean {
   const hydrated = useSyncExternalStore(subscribe, isHydrated, () => false);
   useEffect(() => {
     if (isHydrated()) return;
-    rehydrating ??= Promise.all([useSettings.persist.rehydrate(), useProgress.persist.rehydrate()]);
+    rehydrating ??= Promise.all([
+      useSettings.persist.rehydrate(),
+      useProgress.persist.rehydrate(),
+      useWallet.persist.rehydrate(),
+    ]);
   }, []);
   return hydrated;
 }
