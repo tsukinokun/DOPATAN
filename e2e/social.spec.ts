@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { skipTutorials } from "./helpers";
 
 /** 今日のログインボーナスは受け取り済み・XP を少し持った状態にしておく */
 async function seed(page: import("@playwright/test").Page, xp: number) {
@@ -35,6 +36,7 @@ test("shows rank and level on the home screen", async ({ page }) => {
 
 test("levels up at the end of a session", async ({ page }) => {
   await seed(page, 45);
+  await skipTutorials(page);
   await page.clock.install();
   await page.goto("/");
   await expect(page.getByTestId("level")).toHaveText("Lv.1");

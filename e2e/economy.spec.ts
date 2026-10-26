@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { skipTutorials } from "./helpers";
 
 /** コインとジェムを持った状態のウォレットを先に保存しておく */
 async function seedWallet(page: Page, extra: Record<string, unknown> = {}) {
@@ -42,6 +43,7 @@ test("the first visit of the day gives a login bonus", async ({ page }) => {
 });
 
 test("finishing a session pays coins and shows rewards", async ({ page }) => {
+  await skipTutorials(page);
   await page.clock.install();
   await page.goto("/");
   await page.getByTestId("login-bonus-receive").click();

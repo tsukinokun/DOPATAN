@@ -6,6 +6,7 @@ import { shuffle } from "@/lib/random";
 import type { Question } from "@/lib/session";
 import { PictureCard } from "./cards";
 import type { Feedback } from "./QuestionBoard";
+import { HandDemo } from "./Tutorial";
 
 /** つづり並べ替えで間違えたときに onAnswer に渡す ID(正解の ID と一致しない) */
 export const WRONG_SPELLING = "__wrong_spelling__";
@@ -18,13 +19,15 @@ type Props = {
   onPickup?: () => void;
   /** 一時停止中は操作を受け付けない */
   paused?: boolean;
+  /** 遊び方の説明の直後は、指の動きを見せる */
+  demo?: boolean;
 };
 
 /**
  * 絵と日本語を見て、バラバラの文字をタップして英単語を作る。PC ではキーボードでも打てる。
  * 1文字でも違う文字を選んだら、その時点で不正解にする。
  */
-export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false }: Props) {
+export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false, demo = false }: Props) {
   const word = question.target.word.toLowerCase();
   const tiles = useMemo(
     () => shuffle([...word].map((letter, i) => ({ letter, key: i })), Math.random),
@@ -93,7 +96,8 @@ export function SpellingBoard({ question, showJapanese, feedback, onAnswer, onPi
         })}
       </div>
 
-      <div className="flex max-w-md flex-wrap justify-center gap-2">
+      <div className="relative flex max-w-md flex-wrap justify-center gap-2">
+        {demo && !locked && used.length === 0 && <HandDemo gesture="tap" />}
         {tiles.map((t) => (
           <motion.button
             key={t.key}

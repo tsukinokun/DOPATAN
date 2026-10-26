@@ -6,6 +6,7 @@ import { speak } from "@/lib/fx/audio";
 import type { Question } from "@/lib/session";
 import type { WordSense } from "@/lib/types";
 import { PictureCard, WordChip, type CardState } from "./cards";
+import { HandDemo } from "./Tutorial";
 
 export type Feedback = { chosenId: string; correct: boolean };
 
@@ -17,13 +18,15 @@ type Props = {
   onPickup?: () => void;
   /** 一時停止中は操作を受け付けない */
   paused?: boolean;
+  /** 遊び方の説明の直後は、指の動きを見せる */
+  demo?: boolean;
 };
 
 /**
  * 上の「持ち上げるもの」を下の選択肢のどれかに重ねて答える(Drops 方式)。
  * PC では数字キー(1〜4)でも選べる。
  */
-export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false }: Props) {
+export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false, demo = false }: Props) {
   const { target, options, mode, isIntro } = question;
   const targetRefs = useRef(new Map<string, HTMLElement>());
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -106,8 +109,9 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
           {mode === "wordToPicture" && <WordChip sense={target} />}
           {mode === "pictureToWord" && <PictureCard sense={target} showJapanese={showJapanese} size="lg" />}
           {mode === "listening" && <SpeakerChip />}
-          {isIntro && !locked && <SwipeHint />}
+          {isIntro && !locked && !demo && <SwipeHint />}
         </motion.div>
+        {demo && !locked && <HandDemo gesture={mode === "listening" ? "tapThenDrag" : "drag"} />}
       </div>
 
       {/* 4枚の絵カードが縦に収まるよう、画面の高さに合わせて幅を抑える */}

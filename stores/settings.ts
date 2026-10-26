@@ -13,6 +13,10 @@ export type Settings = {
   /** 空なら全範囲 */
   bands: ScoreBand[];
   themes: Theme[];
+  /** 問題が出たときに英単語を読み上げる(絵→英単語は答えた後に読む) */
+  speakWords: boolean;
+  /** 遊び方の説明を見た出題形式 */
+  seenTutorials: QuestionMode[];
   /** ログインしていない人の名前(端末に保存)。ログインしてクラウドの名前が無ければ、それに使う */
   guestName: string | null;
 };
@@ -30,6 +34,8 @@ export const DEFAULT_SETTINGS: Settings = {
   modes: [...QUESTION_MODES],
   bands: [],
   themes: [],
+  speakWords: true,
+  seenTutorials: [],
   guestName: null,
 };
 

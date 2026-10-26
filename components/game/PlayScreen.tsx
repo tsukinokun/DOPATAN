@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Bgm, preloadVoice, sfx, speak, unlockAudio } from "@/lib/fx/audio";
 import { burstConfetti, feverConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
 import { SessionEngine, type Question } from "@/lib/session";
+import type { QuestionMode } from "@/lib/types";
 import { filterScope, getWords } from "@/lib/words";
 import { useProgress, type AnswerLog } from "@/stores/progress";
 import { useSettings } from "@/stores/settings";
@@ -15,6 +16,7 @@ import { FEVER_EVERY, Hud } from "./Hud";
 import { BigBanner, FeverOverlay, PauseDialog, ScorePopup } from "./Overlays";
 import { QuestionBoard, type Feedback } from "./QuestionBoard";
 import { SpellingBoard } from "./SpellingBoard";
+import { TutorialDialog } from "./Tutorial";
 
 /** 出題形式に合った盤面 */
 function Board(props: React.ComponentProps<typeof QuestionBoard>) {
@@ -25,6 +27,8 @@ export const SESSION_MS = 90 * 1000;
 const FEVER_MS = 8000;
 const NEXT_DELAY_CORRECT = 650;
 const NEXT_DELAY_WRONG = 1500;
+/** 問題のカードが出てから読み上げるまで */
+const SPEAK_DELAY = 250;
 const TIME_UP_DELAY = 1800;
 
 type Phase = "countdown" | "playing" | "timeup";
@@ -64,11 +68,17 @@ export function PlayScreen() {
   const [banner, setBanner] = useState<{ text: string; sub?: string; className?: string } | null>(null);
   const [popup, setPopup] = useState<{ id: number; x: number; y: number; text: string } | null>(null);
   const [paused, setPaused] = useState(false);
+  /** 遊び方の説明を開いている出題形式 */
+  const [tutorialMode, setTutorialMode] = useState<QuestionMode | null>(null);
+  /** 説明を閉じた後、最初の1問に答えるまで指の動きを見せる */
+  const [demo, setDemo] = useState(false);
 
   const stats = useRef({ maxCombo: 0, correct: 0, wrong: 0, feverCount: 0, newWords: 0, answers: [] as AnswerLog[] });
   const scoreRef = useRef(0);
   const timeLeftRef = useRef(SESSION_MS);
   const pausedRef = useRef(false);
+  /** 説明を見ている間と、説明の後の最初の1問に答えるまでは時間を止める */
+  const tutorialRef = useRef(false);
   /** フィーバーが終わる残り時間。一時停止中に終わらないよう、壁時計ではなくゲームの時間で決める */
   const feverEndsAt = useRef<number | null>(null);
   const bgm = useRef<Bgm | null>(null);
@@ -91,23 +101,50 @@ export function PlayScreen() {
     [later],
   );
 
+  /** 問題が出たときの読み上げ。音で覚えられるよう英単語を聞かせる */
+  const speakQuestion = useCallback(
+    (q: Question) => {
+      // リスニングは効果音の設定とは関係なく読む(聞かないと答えられないため)
+      if (q.mode === "listening") {
+        speak(q.target.word);
+        return;
+      }
+      // 絵→英単語は読むと答えがわかってしまうので、答えた後に読む
+      if (q.mode === "pictureToWord") return;
+      const s = useSettings.getState();
+      if (s.sound && s.speakWords) later(() => speak(q.target.word), SPEAK_DELAY);
+    },
+    [later],
+  );
+
   const presentQuestion = useCallback(
     (q: Question) => {
       setFeedback(null);
       setQuestion(q);
       preloadVoice(q.target.word);
-      // リスニングは問題が出たらすぐ聞かせる(効果音の設定とは関係なく、聞かないと答えられないため)
-      if (q.mode === "listening") speak(q.target.word);
+      // その出題形式が初めてなら、遊び方を説明してから始める
+      const settings = useSettings.getState();
+      const firstTime = !settings.seenTutorials.includes(q.mode);
+      if (firstTime) {
+        settings.update({ seenTutorials: [...settings.seenTutorials, q.mode] });
+        tutorialRef.current = true;
+        setTutorialMode(q.mode);
+        setDemo(true);
+      }
       if (q.isIntro) {
         showBanner({ text: "NEW!", sub: "新しい単語", className: "rainbow-text" }, 800);
-        playSound(() => {
-          sfx.intro();
-          speak(q.target.word);
-        });
+        playSound(() => sfx.intro());
       }
+      // 説明を開いたときは、閉じてから読む
+      if (!firstTime) speakQuestion(q);
     },
-    [playSound, showBanner],
+    [playSound, showBanner, speakQuestion],
   );
+
+  const closeTutorial = useCallback(() => {
+    setTutorialMode(null);
+    if (question) speakQuestion(question);
+  }, [question, speakQuestion]);
 
   // 最初のタップで音を有効にする(/play を直接開いたとき用)
   useEffect(() => {
@@ -166,7 +203,7 @@ export function PlayScreen() {
     let last = performance.now();
     const id = setInterval(() => {
       const now = performance.now();
-      if (!document.hidden && !pausedRef.current) timeLeftRef.current = Math.max(0, timeLeftRef.current - (now - last));
+      if (!document.hidden && !pausedRef.current && !tutorialRef.current) timeLeftRef.current = Math.max(0, timeLeftRef.current - (now - last));
       last = now;
       setTimeLeft(timeLeftRef.current);
       if (feverEndsAt.current !== null && timeLeftRef.current <= feverEndsAt.current) {
@@ -206,8 +243,10 @@ export function PlayScreen() {
 
   const handleAnswer = useCallback(
     (chosenId: string, rect: DOMRect | undefined) => {
-      if (!question || feedback || phase !== "playing" || pausedRef.current) return;
+      if (!question || feedback || phase !== "playing" || pausedRef.current || tutorialMode) return;
       const correct = chosenId === question.target.id;
+      tutorialRef.current = false;
+      setDemo(false);
       engine.answer(question, correct);
       recordAnswer(question.target.id, correct);
       stats.current.answers.push({ senseId: question.target.id, correct });
@@ -245,7 +284,11 @@ export function PlayScreen() {
       } else {
         stats.current.wrong++;
         setCombo(0);
-        playSound(() => sfx.wrong());
+        playSound(() => {
+          sfx.wrong();
+          // 正しい単語の発音を聞かせて覚え直す
+          setTimeout(() => speak(question.target.word), 400);
+        });
         vibrate([70, 40, 70]);
         const amplitude = level === "max" ? 18 : level === "standard" ? 8 : 0;
         if (amplitude) {
@@ -260,7 +303,7 @@ export function PlayScreen() {
         if (timeLeftRef.current > 0) presentQuestion(engine.next());
       }, correct ? NEXT_DELAY_CORRECT : NEXT_DELAY_WRONG);
     },
-    [combo, engine, feedback, fever, later, level, phase, playSound, presentQuestion, question, recordAnswer, shake, showBanner, startFever],
+    [combo, engine, feedback, fever, later, level, phase, playSound, presentQuestion, question, recordAnswer, shake, showBanner, startFever, tutorialMode],
   );
 
   const pause = useCallback(() => {
@@ -297,7 +340,8 @@ export function PlayScreen() {
             feedback={phase === "timeup" ? (feedback ?? { chosenId: "", correct: false }) : feedback}
             onAnswer={handleAnswer}
             onPickup={() => playSound(() => sfx.pickup())}
-            paused={paused}
+            paused={paused || tutorialMode !== null}
+            demo={demo}
           />
         )}
       </div>
@@ -308,6 +352,7 @@ export function PlayScreen() {
       />
       <BigBanner show={banner !== null} text={banner?.text ?? ""} sub={banner?.sub} className={banner?.className} />
       <ScorePopup popup={popup} />
+      <TutorialDialog mode={paused ? null : tutorialMode} onClose={closeTutorial} />
       <PauseDialog open={paused} onResume={resume} onQuit={() => router.push("/")} />
     </motion.main>
   );

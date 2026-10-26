@@ -6,9 +6,11 @@ import w990 from "../data/words/990.json";
 
 export const ALL_IDS: string[] = [w600, w730, w860, w990].flat().map((w) => w.id);
 
+const ALL_MODES = ["wordToPicture", "pictureToWord", "listening", "spelling"];
+
 /** 出題形式を絞った設定を、ページを開く前に保存しておく */
 export async function useModes(page: Page, modes: string[]) {
-  await page.addInitScript((m) => {
+  await page.addInitScript(({ m, all }) => {
     if (localStorage.getItem("dopatan-settings")) return;
     localStorage.setItem(
       "dopatan-settings",
@@ -22,11 +24,21 @@ export async function useModes(page: Page, modes: string[]) {
           modes: m,
           bands: [],
           themes: [],
+          seenTutorials: all,
         },
         version: 1,
       }),
     );
-  }, modes);
+  }, { m: modes, all: ALL_MODES });
+}
+
+
+/** 遊び方の説明を見終わった状態にする(説明の間は時間が止まるため)。useModes と一緒には使わない */
+export async function skipTutorials(page: Page) {
+  await page.addInitScript((modes) => {
+    if (localStorage.getItem("dopatan-settings")) return;
+    localStorage.setItem("dopatan-settings", JSON.stringify({ state: { seenTutorials: modes }, version: 1 }));
+  }, ALL_MODES);
 }
 
 /** 全単語を学習済み(しばらく復習不要)にし、指定した1語だけを今すぐ復習する状態にする */

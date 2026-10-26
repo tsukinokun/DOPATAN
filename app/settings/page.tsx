@@ -55,6 +55,7 @@ function SettingsView() {
       <Panel className="flex flex-col divide-y-2 divide-slate-200">
         <Toggle label="日本語を表示する" setting="showJapanese" settings={settings} testId="toggle-japanese" />
         <Toggle label="効果音" setting="sound" settings={settings} />
+        <Toggle label="問題の英語を読み上げる" setting="speakWords" settings={settings} testId="toggle-speak" />
         <Toggle label="BGM" setting="bgm" settings={settings} />
         <Toggle label="振動(スマホ)" setting="vibration" settings={settings} />
       </Panel>
@@ -96,6 +97,19 @@ function SettingsView() {
             {m.note && <span className="text-xs font-normal text-slate-500">{m.note}</span>}
           </label>
         ))}
+      </Panel>
+
+      <Panel className="flex flex-col items-start gap-1">
+        <button
+          type="button"
+          onClick={() => update({ seenTutorials: [] })}
+          disabled={settings.seenTutorials.length === 0}
+          className="font-black text-sky-600 disabled:text-slate-400"
+          data-testid="reset-tutorials"
+        >
+          {settings.seenTutorials.length === 0 ? "遊び方の説明は次のプレイで表示されます" : "遊び方の説明をもう一度見る"}
+        </button>
+        <p className="text-xs text-slate-500">各出題形式が初めて出たときに、遊び方を説明します。</p>
       </Panel>
 
       <Panel>
