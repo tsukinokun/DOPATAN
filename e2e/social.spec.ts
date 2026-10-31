@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { passEventProgress } from "./helpers";
 
 /** 今日のログインボーナスは受け取り済み・XP を少し持った状態にしておく */
 async function seed(page: import("@playwright/test").Page, xp: number) {
@@ -41,7 +42,7 @@ test("levels up at the end of a session", async ({ page }) => {
   await page.getByTestId("play").click({ force: true });
   await expect(page.getByTestId("drag-source")).toBeVisible({ timeout: 10_000 });
   await page.clock.fastForward("03:01");
-  await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
+  await passEventProgress(page);
   await expect(page.getByTestId("level-up")).toContainText("Lv.1 → Lv.2");
   await expect(page.getByTestId("reward-total")).toContainText("⭐+10XP");
 });

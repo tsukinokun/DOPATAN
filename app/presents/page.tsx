@@ -5,9 +5,10 @@ import { useState } from "react";
 import { CurrencyBar } from "@/components/economy/CurrencyBar";
 import { PopAmount } from "@/components/economy/RewardList";
 import { usePendingPresents } from "@/components/presents/usePresents";
-import { RarityBadge, SkinCard } from "@/components/skins/SkinCard";
+import { RewardChips } from "@/components/presents/RewardChips";
+import { SkinCard } from "@/components/skins/SkinCard";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
-import { skinCopies } from "@/lib/economy/ledger";
+import { skinCopies, TICKET_KINDS } from "@/lib/economy/ledger";
 import { sfx } from "@/lib/fx/audio";
 import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
 import { expiryLabel, isUrgent, presentEventId, receivedPresents, type Present } from "@/lib/presents/presents";
@@ -127,7 +128,7 @@ function Presents() {
                   <span className="min-w-0 font-black leading-tight">{e.label.replace(/^プレゼント:/, "")}</span>
                   <span className="shrink-0 text-xs font-black text-slate-500">{formatDate(e.at)} 受け取り</span>
                 </div>
-                <Contents coins={e.coins} gems={e.gems} xp={e.xp} skin={e.skin} />
+                <RewardChips coins={e.coins} gems={e.gems} xp={e.xp} skin={e.skin} tickets={e.tickets} />
               </Panel>
             </li>
           ))}
@@ -144,24 +145,6 @@ const formatDate = (t: number) => {
   const d = new Date(t);
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
-
-/** 中身のチップ(コイン・ジェム・経験値・スキン) */
-function Contents({ coins, gems, xp, skin }: Pick<Present, "coins" | "gems" | "xp" | "skin">) {
-  const s = skin ? getSkin(skin) : undefined;
-  const chip = "rounded-lg border-2 border-slate-900 bg-yellow-50 px-2 py-0.5 text-sm font-black";
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {coins ? <span className={chip}>🪙 {coins.toLocaleString()}</span> : null}
-      {gems ? <span className={chip}>💎 {gems.toLocaleString()}</span> : null}
-      {xp ? <span className={chip}>⭐ {xp.toLocaleString()} XP</span> : null}
-      {s && (
-        <span className={`${chip} flex items-center gap-1`}>
-          <RarityBadge rarity={s.rarity} /> {s.name}
-        </span>
-      )}
-    </div>
-  );
-}
 
 function PresentCard({ present: p, now, onReceive }: { present: Present; now: number; onReceive: () => void }) {
   const [open, setOpen] = useState(false);
@@ -190,7 +173,7 @@ function PresentCard({ present: p, now, onReceive }: { present: Present; now: nu
           )}
         </div>
       </div>
-      <Contents coins={p.coins} gems={p.gems} xp={p.xp} skin={p.skin} />
+      <RewardChips coins={p.coins} gems={p.gems} xp={p.xp} skin={p.skin} tickets={p.tickets} />
       <div className="flex items-center justify-between gap-2">
         <span className={`text-xs font-black ${isUrgent(p.expiresAt, now) ? "text-pink-600" : "text-slate-500"}`}>
           {expiry ? `⏰ ${expiry}` : "期限なし"}
@@ -215,6 +198,9 @@ function ReceivedDialog({ items, onClose }: { items: Received[]; onClose: () => 
   const gems = total("gems");
   const xp = total("xp");
   const skins = items.filter((i) => i.skinTo !== undefined);
+  const tickets = TICKET_KINDS.map((k) => [k, items.reduce((n, { present }) => n + (present.tickets?.[k] ?? 0), 0)] as const).filter(
+    ([, n]) => n > 0,
+  );
   return (
     <motion.div
       className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-slate-950/80 px-4 py-6"
@@ -273,6 +259,11 @@ function ReceivedDialog({ items, onClose }: { items: Received[]; onClose: () => 
               );
             })}
           </div>
+        )}
+        {tickets.length > 0 && (
+          <PopAmount delay={0.75}>
+            <RewardChips tickets={Object.fromEntries(tickets)} />
+          </PopAmount>
         )}
         <ul className="w-full text-left text-sm font-black text-slate-600">
           {items.map(({ present }) => (

@@ -148,7 +148,7 @@ export function PlayScreen() {
       const [sessionEvent] = useWallet.getState().recordSession({ ...stats.current, score: scoreRef.current }, now);
       // ログイン中なら今週のリーグに XP を送る(失敗してもゲームは続ける)
       void useSocial.getState().submitXp(sessionEvent.xp ?? 0).catch(() => {});
-      router.push("/result");
+      router.push("/event/progress");
     }, TIME_UP_DELAY);
   }, [finishSession, later, playSound, router, showBanner]);
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { passEventProgress } from "./helpers";
 
 /** コインとジェムを持った状態のウォレットを先に保存しておく */
 async function seedWallet(page: Page, extra: Record<string, unknown> = {}) {
@@ -49,7 +50,7 @@ test("finishing a session pays coins and shows rewards", async ({ page }) => {
   await page.getByTestId("play").click({ force: true });
   await expect(page.getByTestId("drag-source")).toBeVisible({ timeout: 10_000 });
   await page.clock.fastForward("03:01");
-  await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
+  await passEventProgress(page);
   await expect(page.getByTestId("reward-total")).toContainText("🪙+10");
   // 経験値バーが溜まり、獲得 XP がカウントアップし終わる
   await expect(page.getByTestId("xp-bar")).toBeVisible();
@@ -73,7 +74,7 @@ test("a gacha pull spends coins and adds a skin", async ({ page }) => {
   expect(coins).toBeLessThanOrEqual(5000 - 900 + 9 * 20);
   expect(coins).toBeGreaterThanOrEqual(5000 - 900);
   await page.goto("/collection");
-  await expect(page.getByText(/^\d+ \/ 39 種類を集めた$/)).not.toHaveText("3 / 39 種類を集めた");
+  await expect(page.getByText(/^\d+ \/ 43 種類を集めた$/)).not.toHaveText("3 / 43 種類を集めた");
 });
 
 test("equipping a background changes the page background", async ({ page }) => {
@@ -116,5 +117,5 @@ test("the collection splits skins into category tabs", async ({ page }) => {
   await expect(page.getByTestId("skin-bg-default")).toHaveCount(0);
   await page.getByTestId("skin-tab-sound").click();
   await expect(page.getByTestId("skin-snd-default")).toBeVisible();
-  await expect(page.getByTestId("skin-tab-sound")).toContainText("1/11");
+  await expect(page.getByTestId("skin-tab-sound")).toContainText("1/12");
 });
