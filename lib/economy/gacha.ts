@@ -32,10 +32,10 @@ export const GACHAS: Record<GachaKind, GachaDef> = {
 
 const defaults = new Set(Object.values(DEFAULT_SKINS));
 
-/** ガチャから出るスキン(初期スキンは出ない) */
+/** ガチャから出るスキン(初期スキンとイベント限定スキンは出ない) */
 export function poolOf(kind: GachaKind, rarity: Rarity): Skin[] {
   if (!GACHAS[kind].rates[rarity]) return [];
-  return SKINS.filter((s) => s.rarity === rarity && !defaults.has(s.id));
+  return SKINS.filter((s) => s.rarity === rarity && !defaults.has(s.id) && !s.limited);
 }
 
 /** 提供割合:スキン1つずつの確率 */

@@ -32,7 +32,15 @@ export const PERK_LABEL: Record<PerkKind, string> = {
 
 export const PERK_KINDS: PerkKind[] = ["coins", "xp", "score", "combo"];
 
-type SkinBase = { id: string; name: string; rarity: Rarity; description: string; perk?: PerkKind };
+type SkinBase = {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  description: string;
+  perk?: PerkKind;
+  /** イベントの完走報酬でだけ手に入る(ガチャからは出ない) */
+  limited?: boolean;
+};
 export type Skin =
   | (SkinBase & { category: "background"; look: BackgroundLook })
   | (SkinBase & { category: "effect"; look: EffectLook })
@@ -57,6 +65,9 @@ export const SKINS: readonly Skin[] = [
   { id: "bg-aurora", perk: "combo", category: "background", rarity: "SR", name: "オーロラ", description: "夜空にゆらめく光", look: { from: "#0b1d3a", via: "#00c9a7", to: "#845ec2", pattern: dots("#ffffff88") } },
   { id: "bg-rainbow", perk: "score", category: "background", rarity: "SSR", name: "虹の橋", description: "七色の向こう側へ", look: { from: "#ff3d7f", via: "#ffd23f", to: "#2ec5ff", pattern: "repeating-linear-gradient(120deg, #ffffff33 0 14px, transparent 14px 28px)" } },
 
+  { id: "ev-sugoroku", perk: "coins", limited: true, category: "background", rarity: "SSR", name: "すごろく盤", description: "イベント「すごろく」の完走記念", look: { from: "#1d976c", via: "#93f9b9", to: "#f9d423", pattern: "repeating-conic-gradient(#ffffff40 0 25%, transparent 0 50%) 0 0 / 44px 44px" } },
+  { id: "ev-stamp", perk: "xp", limited: true, category: "background", rarity: "SSR", name: "スタンプ帳", description: "イベント「スタンプラリー」の完走記念", look: { from: "#f6d365", via: "#fda085", to: "#fff1eb", pattern: "radial-gradient(circle, transparent 9px, #e1112277 10px, #e1112277 12px, transparent 13px) 0 0 / 48px 48px" } },
+
   // 正解エフェクト
   { id: "fx-default", category: "effect", rarity: "N", name: "カラフル紙吹雪", description: "いつもの紙吹雪", look: { colors: ["#ff3d7f", "#ffd23f", "#3ee6c1", "#7b5cff", "#2ec5ff"] } },
   { id: "fx-hearts", perk: "combo", category: "effect", rarity: "N", name: "ハート", description: "正解するたび恋に落ちる", look: { colors: ["#ff3d7f", "#ff8fab"], emojis: ["💖", "💕"] } },
@@ -72,6 +83,7 @@ export const SKINS: readonly Skin[] = [
   { id: "fx-thunder", perk: "score", category: "effect", rarity: "R", name: "雷", description: "ひらめきが落ちる", look: { colors: ["#ffd23f", "#2ec5ff"], emojis: ["⚡"] } },
   { id: "fx-rocket", perk: "xp", category: "effect", rarity: "SR", name: "ロケット", description: "スコアが打ち上がる", look: { colors: ["#ff512f", "#ffffff", "#2ec5ff"], emojis: ["🚀", "💫"] } },
   { id: "fx-meteor", perk: "combo", category: "effect", rarity: "SSR", name: "流星群", description: "願いを3回言う前に正解", look: { colors: ["#fff3b0", "#7b5cff", "#2ec5ff"], emojis: ["🌠", "☄️", "✨"] } },
+  { id: "ev-bingo", perk: "score", limited: true, category: "effect", rarity: "SSR", name: "ビンゴボール", description: "イベント「ビンゴ」の完走記念", look: { colors: ["#ff3d7f", "#ffd23f", "#2ec5ff"], emojis: ["🎱", "🔢", "🎉"] } },
 
   // 効果音
   { id: "snd-default", category: "sound", rarity: "N", name: "ピコピコ", description: "いつもの音", look: { wave: "square", pitch: 1, original: true } },
@@ -85,6 +97,7 @@ export const SKINS: readonly Skin[] = [
   { id: "snd-taiko", perk: "coins", category: "sound", rarity: "R", name: "和太鼓", description: "ドドンと低い音", look: { wave: "triangle", pitch: 0.5, layer: "sine" } },
   { id: "snd-synth", perk: "score", category: "sound", rarity: "SR", name: "シンセ", description: "分厚いシンセの音", look: { wave: "sawtooth", pitch: 1, layer: "triangle" } },
   { id: "snd-galaxy", perk: "coins", category: "sound", rarity: "SSR", name: "ギャラクシー", description: "宇宙に響くキラキラ音", look: { wave: "sine", pitch: 1.5, layer: "sawtooth", sparkle: true } },
+  { id: "ev-boss", perk: "combo", limited: true, category: "sound", rarity: "SSR", name: "ボスの咆哮", description: "イベント「ボスバトル」の完走記念", look: { wave: "sawtooth", pitch: 0.6, layer: "square", sparkle: true } },
 ];
 
 export const DEFAULT_SKINS: Record<SkinCategory, string> = {

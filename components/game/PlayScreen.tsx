@@ -145,7 +145,7 @@ export function PlayScreen() {
       const now = Date.now();
       finishSession({ score: scoreRef.current, ...stats.current, finishedAt: now });
       // 学習記録を更新した後に報酬を計算する(マスターした単語や実績の判定に使うため)
-      const [sessionEvent] = useWallet.getState().recordSession(stats.current, now);
+      const [sessionEvent] = useWallet.getState().recordSession({ ...stats.current, score: scoreRef.current }, now);
       // ログイン中なら今週のリーグに XP を送る(失敗してもゲームは続ける)
       void useSocial.getState().submitXp(sessionEvent.xp ?? 0).catch(() => {});
       router.push("/result");

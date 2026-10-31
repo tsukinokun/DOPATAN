@@ -158,7 +158,7 @@ describe("rewards", () => {
 
   it("grants missions, achievements and mastery only once", () => {
     const today = "2026-10-22";
-    const daily = { sessions: 9, correct: 999, maxCombo: 99, newWords: 99, fevers: 9, bestAccuracy: 100 };
+    const daily = { sessions: 9, correct: 999, maxCombo: 99, newWords: 99, fevers: 9, bestAccuracy: 100, bestScore: 99999 };
     const args = {
       ledger: {} as Ledger,
       today,
