@@ -83,7 +83,7 @@ export function GachaMachine({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 px-4"
+      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-slate-950/85 px-4 py-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       onClick={skip}
@@ -93,7 +93,7 @@ export function GachaMachine({
         {phase === "shake" && (
           <motion.div
             key="capsule"
-            className="relative grid h-48 w-48 place-items-center"
+            className="relative my-auto grid h-48 w-48 shrink-0 place-items-center"
             exit={{ scale: 2.5, opacity: 0, transition: { duration: 0.25 } }}
           >
             <motion.div
@@ -124,7 +124,7 @@ export function GachaMachine({
       )}
 
       {phase === "reveal" && (
-        <div className="flex w-full max-w-2xl flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+        <div className="my-auto flex w-full max-w-2xl flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
           {top === "SSR" && <span className="rainbow-text text-5xl font-black">SSR!!</span>}
           <div
             className={`grid w-full gap-2 ${results.length === 1 ? "max-w-[12rem] grid-cols-1" : "grid-cols-3 sm:grid-cols-5"}`}
@@ -138,7 +138,7 @@ export function GachaMachine({
                 transition={{ delay: i * CARD_STEP_S, type: "spring", stiffness: 300, damping: 18 }}
                 style={{ filter: r.skin.rarity === "N" ? undefined : `drop-shadow(0 0 10px ${RARITY_GLOW[r.skin.rarity]})` }}
               >
-                <SkinCard skin={r.skin} level={r.level} footer={<ResultTag result={r} />} />
+                <SkinCard skin={r.skin} copies={r.copies} footer={<ResultTag result={r} />} />
               </motion.div>
             ))}
           </div>
@@ -189,7 +189,7 @@ function ResultTag({ result: r }: { result: GachaResult }) {
   }
   return (
     <span className="text-[11px] font-black text-slate-500" data-testid="gacha-tag-progress">
-      かぶり(Lv.{r.level} へ前進)
+      かぶり +1
     </span>
   );
 }

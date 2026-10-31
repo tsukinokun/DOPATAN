@@ -60,11 +60,16 @@ function preview(look: SoundLook, current: SoundLook) {
   setSoundSkin(current);
 }
 
+const CATEGORIES = Object.keys(CATEGORY_LABEL) as SkinCategory[];
+const TAB_LABEL: Record<SkinCategory, string> = { background: "🖼️ 背景", effect: "🎉 エフェクト", sound: "🔊 効果音" };
+
 function Skins() {
   const ledger = useWallet((s) => s.ledger);
   const equipped = useWallet((s) => s.equipped);
   const equip = useWallet((s) => s.equip);
+  const [category, setCategory] = useState<SkinCategory>("background");
   const copies = skinCopies(ledger);
+  const current = skinOf(category, equipped[category]);
   const perks = equippedPerks(equipped, copies);
 
   return (
@@ -85,56 +90,74 @@ function Skins() {
           かぶるとスキンのレベルが上がり、効果が強くなります。装備している3つの効果が合計されます。
         </p>
       </Panel>
-      {(Object.keys(CATEGORY_LABEL) as SkinCategory[]).map((category) => {
-        const current = skinOf(category, equipped[category]);
-        return (
-          <Panel key={category} className="flex flex-col gap-3">
-            <h2 className="font-black">{CATEGORY_LABEL[category]}</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {SKINS.filter((s) => s.category === category).map((skin) => {
-                const have = copies.has(skin.id);
-                const isEquipped = current.id === skin.id;
-                return (
-                  <SkinCard
-                    key={skin.id}
-                    skin={skin}
-                    locked={!have}
-                    copies={copies.get(skin.id)}
-                    footer={
-                      have && (
-                        <div className="mt-auto flex gap-1">
-                          <button
-                            type="button"
-                            disabled={isEquipped}
-                            onClick={() => equip(category, skin.id)}
-                            data-testid={`equip-${skin.id}`}
-                            className={`flex-1 rounded-lg border-2 border-slate-900 py-1 text-xs font-black ${
-                              isEquipped ? "bg-emerald-300" : "bg-yellow-300"
-                            }`}
-                          >
-                            {isEquipped ? "装備中" : "装備する"}
-                          </button>
-                          {skin.category === "sound" && (
-                            <button
-                              type="button"
-                              aria-label={`${skin.name} を試聴`}
-                              data-sfx="off"
-                              onClick={() => preview(skin.look, skinOf("sound", equipped.sound).look)}
-                              className="rounded-lg border-2 border-slate-900 px-2 text-xs"
-                            >
-                              ▶
-                            </button>
-                          )}
-                        </div>
-                      )
-                    }
-                  />
-                );
-              })}
-            </div>
-          </Panel>
-        );
-      })}
+      <div className="grid grid-cols-3 gap-2">
+        {CATEGORIES.map((c) => {
+          const all = SKINS.filter((s) => s.category === c);
+          const got = all.filter((s) => copies.has(s.id)).length;
+          return (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={category === c}
+              onClick={() => setCategory(c)}
+              data-testid={`skin-tab-${c}`}
+              className={`pop-border flex flex-col items-center rounded-2xl py-1.5 font-black ${
+                category === c ? "bg-slate-900 text-yellow-300" : "bg-white"
+              }`}
+            >
+              <span className="text-sm">{TAB_LABEL[c]}</span>
+              <span className="text-[11px] tabular-nums opacity-80">
+                {got}/{all.length}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <Panel key={category} className="flex flex-col gap-3">
+        <h2 className="font-black">{CATEGORY_LABEL[category]}</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {SKINS.filter((s) => s.category === category).map((skin) => {
+            const have = copies.has(skin.id);
+            const isEquipped = current.id === skin.id;
+            return (
+              <SkinCard
+                key={skin.id}
+                skin={skin}
+                locked={!have}
+                copies={copies.get(skin.id)}
+                footer={
+                  have && (
+                    <div className="mt-auto flex gap-1">
+                      <button
+                        type="button"
+                        disabled={isEquipped}
+                        onClick={() => equip(category, skin.id)}
+                        data-testid={`equip-${skin.id}`}
+                        className={`flex-1 rounded-lg border-2 border-slate-900 py-1 text-xs font-black ${
+                          isEquipped ? "bg-emerald-300" : "bg-yellow-300"
+                        }`}
+                      >
+                        {isEquipped ? "装備中" : "装備する"}
+                      </button>
+                      {skin.category === "sound" && (
+                        <button
+                          type="button"
+                          aria-label={`${skin.name} を試聴`}
+                          data-sfx="off"
+                          onClick={() => preview(skin.look, skinOf("sound", equipped.sound).look)}
+                          className="rounded-lg border-2 border-slate-900 px-2 text-xs"
+                        >
+                          ▶
+                        </button>
+                      )}
+                    </div>
+                  )
+                }
+              />
+            );
+          })}
+        </div>
+      </Panel>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { copiesToNext, MAX_SKIN_LEVEL, PERK_LABEL, perkPercent, skinLevel, type Rarity, type Skin } from "@/lib/skins";
+import { levelProgress, MAX_SKIN_LEVEL, PERK_LABEL, perkPercent, skinLevel, type Rarity, type Skin } from "@/lib/skins";
 
 export const RARITY_STYLE: Record<Rarity, string> = {
   N: "bg-slate-200 text-slate-700",
@@ -72,25 +72,45 @@ export function PerkText({ skin, level = 1 }: { skin: Skin; level?: number }) {
   );
 }
 
+/** 次のレベルまでの進み具合のバー。最大レベルなら満タンの虹色 */
+export function LevelProgress({ copies }: { copies: number }) {
+  const level = skinLevel(copies);
+  const progress = levelProgress(copies);
+  const max = level >= MAX_SKIN_LEVEL;
+  const ratio = progress ? progress.have / progress.need : 1;
+  return (
+    <div className="flex flex-col gap-0.5" data-testid="level-progress">
+      <div className="flex items-baseline justify-between text-[10px] font-black text-slate-500">
+        <span>{max ? "Lv.MAX" : `Lv.${level}→${level + 1}`}</span>
+        <span className="tabular-nums" data-testid="level-progress-count">
+          {progress ? `${progress.have}/${progress.need}` : "MAX"}
+        </span>
+      </div>
+      <div className="h-2.5 overflow-hidden rounded-full border-2 border-slate-900 bg-slate-100">
+        <div
+          className={`h-full rounded-full ${max ? "rainbow-bg" : "bg-emerald-400"}`}
+          style={{ width: `${Math.round(ratio * 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 /**
- * スキンのカード。copies(持っている枚数)を渡すと、レベルと次のレベルまでの枚数も出す。
- * level だけを渡すと、そのレベルでの効果を出す(ガチャの結果用)。
+ * スキンのカード。copies(持っている枚数)を渡すと、レベルと次のレベルまでの進み具合も出す。
  */
 export function SkinCard({
   skin,
   locked = false,
   copies,
-  level: levelProp,
   footer,
 }: {
   skin: Skin;
   locked?: boolean;
   copies?: number;
-  level?: number;
   footer?: React.ReactNode;
 }) {
-  const level = levelProp ?? (copies === undefined ? 0 : skinLevel(copies));
-  const toNext = copies === undefined ? null : copiesToNext(copies);
+  const level = copies === undefined ? 0 : skinLevel(copies);
   return (
     <div className="pop-border flex flex-col overflow-hidden rounded-2xl bg-white" data-testid={`skin-${skin.id}`}>
       <div className="relative h-20">
@@ -108,11 +128,7 @@ export function SkinCard({
         <span className="text-sm font-black leading-tight">{locked ? "???" : skin.name}</span>
         {!locked && <span className="text-[11px] leading-tight text-slate-500">{skin.description}</span>}
         {skin.perk && <PerkText skin={skin} level={locked ? 1 : Math.max(1, level)} />}
-        {!locked && skin.perk && toNext !== null && level > 0 && (
-          <span className="text-[10px] font-black text-slate-500">
-            あと{toNext}枚で Lv.{level + 1}
-          </span>
-        )}
+        {!locked && skin.perk && copies !== undefined && level > 0 && <LevelProgress copies={copies} />}
         {footer}
       </div>
     </div>
