@@ -20,6 +20,7 @@ import {
 } from "@/lib/economy/rewards";
 import { applyPercent, equippedPerks } from "@/lib/economy/perks";
 import { EMPTY_WALLET, type WalletData } from "@/lib/economy/walletData";
+import { presentEvent, type Present } from "@/lib/presents/presents";
 import { getSkin, type SkinCategory } from "@/lib/skins";
 import { isMastered } from "@/lib/srs";
 import { appStorage } from "@/lib/storage";
@@ -40,6 +41,8 @@ type WalletStore = WalletData & {
   equip: (category: SkinCategory, id: string) => void;
   /** サーバーで決まった報酬(リーグ・招待・応援)を台帳に入れる。入れたばかりのものを返す */
   grantServerRewards: (events: LedgerEvent[]) => LedgerEvent[];
+  /** プレゼントを受け取って台帳に入れる。受け取ったばかりのイベントを返す(受け取り済みは飛ばす) */
+  receivePresents: (presents: Present[], now?: number) => LedgerEvent[];
 };
 
 const DAILY_KEEP_DAYS = 30;
@@ -179,6 +182,9 @@ export const useWallet = create<WalletStore>()(
         if (fresh.length > 0) set({ ledger: withEvents(state.ledger, fresh) });
         return fresh;
       },
+
+      receivePresents: (presents, now = Date.now()) =>
+        get().grantServerRewards(presents.map((p) => presentEvent(p, now))),
 
       equip: (category, id) => {
         const state = get();

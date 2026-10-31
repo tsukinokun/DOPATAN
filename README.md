@@ -58,6 +58,22 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 - **既存の Supabase プロジェクトの場合**:`0003_social.sql` を SQL Editor で1回実行してください。
 - **SQL のテスト**:`lib/social/sql.test.ts` が PGlite(WebAssembly の Postgres)でマイグレーションを実際に流して確かめます(`npm test` に含まれます)。
 
+## プレゼントボックス
+
+補填やイベント報酬を配る場所です(ホームの 🎁)。中身はコイン・ジェム・経験値・スキンを組み合わせられます(スキンは、持っていればかぶり扱いでレベルが上がります。経験値はリーグの週間 XP には入りません)。受け取ったかどうかは台帳の ID(`present:app:<id>` / `present:server:<id>`)で決まるので、端末をまたいでも二重には受け取れません。
+
+- **全員に配る(ゲストにも届く)**:`lib/presents/catalog.ts` の `APP_PRESENTS` に足してデプロイします。`id` は一度配ったら変えないでください(変えると、もう一度受け取れてしまいます)。`startsAt`(受け取れるようになる時刻)と `expiresAt`(期限。`null` なら期限なし)はミリ秒で書きます。
+- **特定の人に配る・デプロイせずに配る(ログイン中の人だけに届く)**:Supabase の SQL Editor で `dopatan_private.send_present` を呼びます。最初の引数はフレンドコードで、`null` にすると全員向けになります。
+
+  ```sql
+  -- 引数:フレンドコード, タイトル, メッセージ, コイン, ジェム, 経験値, スキンID, 期限
+  select dopatan_private.send_present('ABCD1234', '補填', 'ご迷惑をおかけしました', 0, 50, 0, null, now() + interval '30 days');
+  select dopatan_private.send_present(null, 'イベント報酬', null, 500, 0, 0, 'bg-gold', '2026-12-31 23:59+09');
+  ```
+
+  Table Editor で `presents` テーブルに行を足しても同じです(`user_id` が空なら全員向け)。
+- **既存の Supabase プロジェクトの場合**:`supabase/migrations/0005_presents.sql` を SQL Editor で1回実行してください。実行するまでは、コードで配るプレゼントだけが届きます。
+
 ## 構成
 
 | 場所 | 中身 |
@@ -75,7 +91,8 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 | `stores/wallet.ts` | コイン・ジェム・スキン・ミッションの状態 |
 | `lib/social/` | リーグ・フレンドの API、表示名、サーバー由来の報酬 |
 | `stores/social.ts`、`components/social/` | フレンド・リーグの状態と画面の部品 |
-| `supabase/migrations/` | データベースの定義(0001〜0003) |
+| `lib/presents/` | プレゼントボックス(受け取りの判定、コードで配るプレゼントの一覧) |
+| `supabase/migrations/` | データベースの定義(0001〜0005) |
 | `data/words/` | 単語データ(スコア帯ごと。アプリは使うときに読み込む) |
 | `public/emoji/`、`public/illustrations/` | 単語の絵。[Fluent Emoji](https://github.com/microsoft/fluentui-emoji)(MIT)と、自分で描いた SVG(こちらが優先) |
 | `public/audio/` | 発音音声(Kokoro-82M で作成。無い単語はブラウザの読み上げを使う) |

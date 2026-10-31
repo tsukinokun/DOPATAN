@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Present } from "@/lib/presents/presents";
 
 /** 公開用の数値(publish_stats で自分が出したもの) */
 export type PublicStats = {
@@ -86,4 +87,37 @@ export const socialApi = {
   acceptInvite: (s: SupabaseClient, code: string) =>
     call<{ inviterId: string; nickname: string | null; friendCode: string }>(s, "accept_invite", { p_code: code }),
   inbox: (s: SupabaseClient) => call<Inbox>(s, "my_social_inbox"),
+  /** サーバーから届いたプレゼント。0005_presents.sql をまだ実行していないデータベースでは空にする */
+  myPresents: async (s: SupabaseClient): Promise<Present[]> => {
+    const { data, error } = await s.rpc("my_presents");
+    if (error) return [];
+    return ((data ?? []) as ServerPresentRow[]).map(presentFromRow);
+  },
 };
+
+type ServerPresentRow = {
+  id: string;
+  title: string;
+  message: string | null;
+  coins: number;
+  gems: number;
+  xp: number;
+  skin: string | null;
+  startsAt: string | null;
+  expiresAt: string | null;
+};
+
+export function presentFromRow(r: ServerPresentRow): Present {
+  return {
+    id: r.id,
+    source: "server",
+    title: r.title,
+    message: r.message ?? undefined,
+    coins: r.coins || undefined,
+    gems: r.gems || undefined,
+    xp: r.xp || undefined,
+    skin: r.skin ?? undefined,
+    startsAt: r.startsAt ? Date.parse(r.startsAt) : undefined,
+    expiresAt: r.expiresAt ? Date.parse(r.expiresAt) : null,
+  };
+}
