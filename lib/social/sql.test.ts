@@ -66,6 +66,7 @@ beforeAll(async () => {
   await db.exec(migration("0002_wallet.sql"));
   await db.exec(migration("0003_social.sql"));
   await db.exec(migration("0004_short_sessions.sql"));
+  await db.exec(migration("0005_presents.sql"));
   // Supabase の「Automatically expose new tables」がオンの状態を再現する(RLS だけで守れているかを見る)
   await db.exec(`grant usage on schema public to authenticated; grant all on all tables in schema public to authenticated;`);
 }, 60_000);
@@ -78,6 +79,7 @@ describe("migration", () => {
   it("can be run again without errors", async () => {
     await db.exec(migration("0003_social.sql"));
     await db.exec(migration("0004_short_sessions.sql"));
+    await db.exec(migration("0005_presents.sql"));
   });
 });
 
@@ -275,5 +277,73 @@ describe("friends, cheers and invites", () => {
   it("does not let clients call internal functions or fake the clock", async () => {
     const u = await addUser();
     await expect(as(u, `select dopatan_private.ensure_league($1)`, [u])).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe("presents", () => {
+  type Row = { id: string; title: string; gems: number; expiresAt: string | null };
+  const send = async (code: string | null, title: string, gems = 10, expires: string | null = null) =>
+    (
+      await db.query<{ id: string }>(
+        `select dopatan_private.send_present($1, $2, null, 0, $3, 0, null, $4::timestamptz) as id`,
+        [code, title, gems, expires],
+      )
+    ).rows[0].id;
+
+  it("shows presents for everyone and for me, but not for others", async () => {
+    const a = await addUser();
+    const b = await addUser();
+    const codeA = (await rpc<{ friendCode: string }>(a, "my_profile")).friendCode;
+    await rpc(b, "my_profile");
+    await send(null, "みんなへ");
+    await send(codeA.toLowerCase(), "Aさんへ", 50);
+    const forA = (await rpc<Row[]>(a, "my_presents")).map((r) => r.title);
+    const forB = (await rpc<Row[]>(b, "my_presents")).map((r) => r.title);
+    expect(forA).toEqual(expect.arrayContaining(["みんなへ", "Aさんへ"]));
+    expect(forB).toContain("みんなへ");
+    expect(forB).not.toContain("Aさんへ");
+  });
+
+  it("hides presents that have not started or have expired", async () => {
+    const u = await addUser();
+    const code = (await rpc<{ friendCode: string }>(u, "my_profile")).friendCode;
+    await send(code, "期限切れ", 10, "2026-10-19T11:00:00+09:00");
+    await send(code, "あと1日", 10, "2026-10-20T12:00:00+09:00");
+    await db.query(
+      `insert into public.presents (user_id, title, gems, starts_at) values ($1, 'まだ', 10, '2026-10-25T00:00:00+09:00')`,
+      [u],
+    );
+    const titles = (await rpc<Row[]>(u, "my_presents")).map((r) => r.title);
+    expect(titles).toContain("あと1日");
+    expect(titles).not.toContain("期限切れ");
+    expect(titles).not.toContain("まだ");
+    await setNow("2026-10-26T00:00:00+09:00");
+    const later = (await rpc<Row[]>(u, "my_presents")).map((r) => r.title);
+    expect(later).toContain("まだ");
+    expect(later).not.toContain("あと1日");
+  });
+
+  it("only lets the admin send presents and blocks direct table access", async () => {
+    const u = await addUser();
+    await rpc(u, "my_profile");
+    await expect(send("ZZZZZZZZ", "だれ?")).rejects.toThrow(/not_found/);
+    await expect(
+      as(u, `select dopatan_private.send_present(null, 'ずる', null, 0, 9999, 0, null, null)`),
+    ).rejects.toThrow(/permission denied/);
+    expect(await as(u, `select * from public.presents`)).toEqual([]);
+    // 列の既定値が非公開スキーマの関数を使うので、RLS より先に権限で止まる(どちらでも書き込めない)
+    await expect(as(u, `insert into public.presents (title, gems) values ('ずる', 9999)`)).rejects.toThrow(
+      /row-level security|permission denied/,
+    );
+    await expect(db.query(`select dopatan_private.send_present(null, 'マイナス', null, 0, -5, 0, null, null)`)).rejects.toThrow(/check/);
+  });
+
+  it("requires sign-in", async () => {
+    await db.exec(`set role authenticated`);
+    try {
+      await expect(db.query(`select public.my_presents()`)).rejects.toThrow(/not_signed_in/);
+    } finally {
+      await db.exec(`reset role`);
+    }
   });
 });

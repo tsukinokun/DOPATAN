@@ -22,7 +22,7 @@ function iconFor(e: LedgerEvent): string {
 const sum = (events: LedgerEvent[], key: "coins" | "gems" | "xp") => events.reduce((n, e) => n + (e[key] ?? 0), 0);
 
 /** 跳ねて出てくる金額 */
-function PopAmount({ children, delay }: { children: React.ReactNode; delay: number }) {
+export function PopAmount({ children, delay }: { children: React.ReactNode; delay: number }) {
   return (
     <motion.span
       className="inline-block"

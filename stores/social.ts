@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { totalXp, type LedgerEvent } from "@/lib/economy/ledger";
 import { currentStreak, dateKey, levelFromXp } from "@/lib/economy/rewards";
 import { isMastered } from "@/lib/srs";
+import type { Present } from "@/lib/presents/presents";
 import { socialApi, type Inbox, type MyProfile } from "@/lib/social/api";
 import { validateNickname } from "@/lib/social/names";
 import { rewardsFromInbox } from "@/lib/social/rewards";
@@ -17,6 +18,8 @@ export const PENDING_INVITE_KEY = "dopatan-invite-code";
 type SocialStore = {
   profile: MyProfile | null;
   inbox: Inbox | null;
+  /** サーバー(presents テーブル)から届いたプレゼント */
+  serverPresents: Present[];
   /** 受け取ったばかりのサーバー由来の報酬(ホームで通知する) */
   newRewards: LedgerEvent[];
   /** 招待を受け取った結果のメッセージ(ホームで通知する) */
@@ -72,13 +75,18 @@ let accepting: Promise<void> | null = null;
 export const useSocial = create<SocialStore>()((set, get) => ({
   profile: null,
   inbox: null,
+  serverPresents: [],
   newRewards: [],
   inviteMessage: null,
 
   refresh: async () => {
     const supabase = signedInClient();
     if (!supabase) return;
-    const [loaded, inbox] = await Promise.all([socialApi.myProfile(supabase), socialApi.inbox(supabase)]);
+    const [loaded, inbox, serverPresents] = await Promise.all([
+      socialApi.myProfile(supabase),
+      socialApi.inbox(supabase),
+      socialApi.myPresents(supabase),
+    ]);
     // ゲストのときに付けた名前があり、クラウドの名前がまだ無ければ、それを引き継ぐ
     let profile = loaded;
     const guestName = validateNickname(useSettings.getState().guestName ?? "");
@@ -91,7 +99,7 @@ export const useSocial = create<SocialStore>()((set, get) => ({
       }
     }
     const fresh = useWallet.getState().grantServerRewards(rewardsFromInbox(inbox, Date.now()));
-    set((s) => ({ profile, inbox, newRewards: [...s.newRewards, ...fresh] }));
+    set((s) => ({ profile, inbox, serverPresents, newRewards: [...s.newRewards, ...fresh] }));
     await socialApi.publishStats(supabase, publicStats());
   },
 
@@ -119,5 +127,5 @@ export const useSocial = create<SocialStore>()((set, get) => ({
   },
 
   dismissNotices: () => set({ newRewards: [], inviteMessage: null }),
-  reset: () => set({ profile: null, inbox: null, newRewards: [], inviteMessage: null }),
+  reset: () => set({ profile: null, inbox: null, serverPresents: [], newRewards: [], inviteMessage: null }),
 }));
