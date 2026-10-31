@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Achievements } from "@/components/economy/Achievements";
+import { AnimatedBar } from "@/components/fx/AnimatedBar";
 import { LevelBar, NicknameForm } from "@/components/social/common";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { totalFevers, totalXp } from "@/lib/economy/ledger";
@@ -128,12 +129,8 @@ function BasicStats() {
   );
 }
 
-function Bar({ value, max, className }: { value: number; max: number; className: string }) {
-  return (
-    <div className="h-3 overflow-hidden rounded-full border-2 border-slate-900 bg-slate-100">
-      <div className={`h-full ${className}`} style={{ width: `${max === 0 ? 0 : (value / max) * 100}%` }} />
-    </div>
-  );
+function Bar({ value, max, className, delay }: { value: number; max: number; className: string; delay?: number }) {
+  return <AnimatedBar ratio={max === 0 ? 0 : value / max} className={className} delay={delay} />;
 }
 
 function WordStats() {
@@ -163,7 +160,7 @@ function WordStats() {
           正答率 <span className="text-lg text-pink-500">{accuracy === null ? "-" : `${accuracy}%`}</span>
         </span>
       </div>
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <div key={r.label} className="flex flex-col gap-1">
           <div className="flex items-baseline justify-between text-sm font-black">
             <span>{r.label}</span>
@@ -171,8 +168,8 @@ function WordStats() {
               学習 {r.learned} / {r.total}・マスター {r.mastered}
             </span>
           </div>
-          <Bar value={r.learned} max={r.total} className="bg-gradient-to-r from-sky-400 to-violet-500" />
-          <Bar value={r.mastered} max={r.total} className="bg-amber-400" />
+          <Bar value={r.learned} max={r.total} className="bg-gradient-to-r from-sky-400 to-violet-500" delay={i * 0.1} />
+          <Bar value={r.mastered} max={r.total} className="bg-amber-400" delay={i * 0.1 + 0.05} />
         </div>
       ))}
       <p className="text-xs text-slate-500">上のバーは学習した単語、下のバーはマスターした単語です。</p>

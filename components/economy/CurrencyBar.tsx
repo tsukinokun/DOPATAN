@@ -1,6 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useState } from "react";
+import { Ticker } from "@/components/fx/Ticker";
 import { balance } from "@/lib/economy/ledger";
 import { currentStreak, dateKey } from "@/lib/economy/rewards";
 import { useWallet } from "@/stores/wallet";
@@ -25,21 +27,34 @@ export function CurrencyBar({ now }: { now: number }) {
   );
 }
 
+/** 残高。値が変わると前の値から数えて、数え終わると弾む(増えたらピンク、減ったら灰色に一瞬光る) */
 function Amount({ icon, value, testId }: { icon: string; value: number; testId: string }) {
+  const [prev, setPrev] = useState(value);
+  const [flash, setFlash] = useState<{ key: number; up: boolean } | null>(null);
+  if (prev !== value) {
+    setFlash((f) => ({ key: (f?.key ?? 0) + 1, up: value > prev }));
+    setPrev(value);
+  }
   return (
     <span className="pop-border flex items-center gap-1 rounded-full bg-white px-3 py-1 font-black">
-      <span aria-hidden>{icon}</span>
-      <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
-          key={value}
-          data-testid={testId}
-          initial={{ y: -12, scale: 1.4, color: "#ec4899" }}
-          animate={{ y: 0, scale: 1, color: "#0f172a" }}
-          className="tabular-nums"
-        >
-          {value.toLocaleString()}
-        </motion.span>
-      </AnimatePresence>
+      <motion.span
+        aria-hidden
+        key={flash?.key ?? 0}
+        className="inline-block"
+        initial={flash ? { scale: 1.6, rotate: -20 } : false}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: "spring", stiffness: 500, damping: 12 }}
+      >
+        {icon}
+      </motion.span>
+      <motion.span
+        key={`v${flash?.key ?? 0}`}
+        initial={flash ? { color: flash.up ? "#ec4899" : "#94a3b8" } : false}
+        animate={{ color: "#0f172a" }}
+        transition={{ duration: 1.2 }}
+      >
+        <Ticker value={value} testId={testId} className="tabular-nums" />
+      </motion.span>
     </span>
   );
 }

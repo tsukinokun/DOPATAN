@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
+import { Ticker } from "@/components/fx/Ticker";
 import { sfx } from "@/lib/fx/audio";
 import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
 import { useSettings } from "@/stores/settings";
@@ -55,7 +56,9 @@ export function LoginBonus() {
             >
               💎
             </motion.span>
-            <span className="text-4xl font-black text-sky-500 text-stroke">+{gems}</span>
+            <span className="text-4xl font-black text-sky-500 text-stroke">
+              +<Ticker value={gems} from={0} delay={0.4} testId="login-bonus-gems" />
+            </span>
             <ul className="w-full text-left text-sm font-black text-slate-600">
               {bonus.events.map((e) => (
                 <li key={e.id} className="flex justify-between gap-2">

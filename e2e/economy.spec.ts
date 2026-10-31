@@ -51,6 +51,10 @@ test("finishing a session pays coins and shows rewards", async ({ page }) => {
   await page.clock.fastForward("03:01");
   await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
   await expect(page.getByTestId("reward-total")).toContainText("🪙+10");
+  // 経験値バーが溜まり、獲得 XP がカウントアップし終わる
+  await expect(page.getByTestId("xp-bar")).toBeVisible();
+  await expect(page.getByTestId("xp-gained")).toHaveText("10");
+  await expect(page.getByTestId("xp-level")).toHaveText("Lv.1");
   await expect(page.getByText("実績解除:はじめの一歩")).toBeVisible();
   await page.goto("/");
   await expect(page.getByTestId("coins")).toHaveText("10");

@@ -9,6 +9,7 @@ import { socialApi, type PersonSummary, type ProfileDetail } from "@/lib/social/
 import { tierOf } from "@/lib/social/leagues";
 import { displayName, validateNickname } from "@/lib/social/names";
 import { getSupabase } from "@/lib/supabase/client";
+import { AnimatedBar } from "@/components/fx/AnimatedBar";
 import { Panel, PopButton } from "@/components/ui";
 import { useAuth } from "@/stores/auth";
 import { useSocial } from "@/stores/social";
@@ -35,13 +36,7 @@ export function LevelBar() {
             あと {to - xp} XP
           </span>
         </div>
-        <div className="h-3 overflow-hidden rounded-full border-2 border-slate-900 bg-slate-100">
-          <motion.div
-            className="h-full bg-gradient-to-r from-sky-400 to-violet-500"
-            initial={false}
-            animate={{ width: `${((xp - from) / (to - from)) * 100}%` }}
-          />
-        </div>
+        <AnimatedBar ratio={(xp - from) / (to - from)} className="bg-gradient-to-r from-sky-400 to-violet-500" delay={0.2} />
       </div>
     </Panel>
   );
