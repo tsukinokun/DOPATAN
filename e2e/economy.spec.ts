@@ -69,7 +69,7 @@ test("a gacha pull spends coins and adds a skin", async ({ page }) => {
   expect(coins).toBeLessThanOrEqual(5000 - 900 + 9 * 20);
   expect(coins).toBeGreaterThanOrEqual(5000 - 900);
   await page.goto("/collection");
-  await expect(page.getByText(/^\d+ \/ 21 種類を集めた$/)).not.toHaveText("3 / 21 種類を集めた");
+  await expect(page.getByText(/^\d+ \/ 39 種類を集めた$/)).not.toHaveText("3 / 39 種類を集めた");
 });
 
 test("equipping a background changes the page background", async ({ page }) => {
@@ -82,4 +82,21 @@ test("equipping a background changes the page background", async ({ page }) => {
   expect(from).toBe("#000428");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-background", "bg-space");
+});
+
+test("duplicates level up a skin and equipped perks are summed", async ({ page }) => {
+  // bg-gold を3枚(Lv.2)持っている状態
+  await seedWallet(page, {
+    g1: { id: "g1", at: 0, label: "", skin: "bg-gold" },
+    g2: { id: "g2", at: 0, label: "", skin: "bg-gold" },
+    g3: { id: "g3", at: 0, label: "", skin: "bg-gold" },
+  });
+  await page.goto("/collection");
+  const card = page.getByTestId("skin-bg-gold");
+  await expect(card.getByTestId("level-badge")).toHaveText("Lv.2");
+  await expect(card.getByTestId("perk-text")).toHaveText("🪙 コイン +18%");
+  await expect(card).toContainText("あと1枚で Lv.3");
+  await expect(page.getByTestId("equipped-perks")).toContainText("🪙 コイン +0%");
+  await page.getByTestId("equip-bg-gold").click();
+  await expect(page.getByTestId("equipped-perks")).toContainText("🪙 コイン +18%");
 });

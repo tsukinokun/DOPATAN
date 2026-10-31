@@ -9,7 +9,7 @@ import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { canAfford, GACHAS, skinRates, type GachaKind, type GachaResult, type Price } from "@/lib/economy/gacha";
 import { balance } from "@/lib/economy/ledger";
 import { unlockAudio } from "@/lib/fx/audio";
-import { CATEGORY_LABEL } from "@/lib/skins";
+import { CATEGORY_LABEL, PERK_LABEL } from "@/lib/skins";
 import { useWallet } from "@/stores/wallet";
 
 export default function GachaPage() {
@@ -100,14 +100,18 @@ function Gacha() {
                 <span className="flex items-center gap-2">
                   <RarityBadge rarity={skin.rarity} />
                   {skin.name}
-                  <span className="text-xs text-slate-500">({CATEGORY_LABEL[skin.category]})</span>
+                  <span className="text-xs text-slate-500">
+                    ({CATEGORY_LABEL[skin.category]}
+                    {skin.perk && ` / ${PERK_LABEL[skin.perk]}`})
+                  </span>
                 </span>
                 <span className="tabular-nums">{(rate * 100).toFixed(2)}%</span>
               </li>
             ))}
           </ul>
           <p className="mt-2 text-xs text-slate-500">
-            持っているスキンが出たときは、{kind === "normal" ? "コイン" : "ジェム"}が一部戻ってきます。
+            持っているスキンが出るとレベルが上がり、効果が強くなります(Lv.MAX まで)。Lv.MAX
+            のスキンが出たときは、{kind === "normal" ? "コイン" : "ジェム"}が一部戻ってきます。
           </p>
         </details>
       </Panel>

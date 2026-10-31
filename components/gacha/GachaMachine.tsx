@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { GachaResult } from "@/lib/economy/gacha";
 import { sfx } from "@/lib/fx/audio";
 import { burstConfetti, feverConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
-import { RARITY_ORDER, type Rarity } from "@/lib/skins";
+import { MAX_SKIN_LEVEL, RARITY_ORDER, type Rarity } from "@/lib/skins";
 import { RARITY_GLOW, SkinCard } from "@/components/skins/SkinCard";
 import { useSettings } from "@/stores/settings";
 
@@ -138,19 +138,7 @@ export function GachaMachine({
                 transition={{ delay: i * CARD_STEP_S, type: "spring", stiffness: 300, damping: 18 }}
                 style={{ filter: r.skin.rarity === "N" ? undefined : `drop-shadow(0 0 10px ${RARITY_GLOW[r.skin.rarity]})` }}
               >
-                <SkinCard
-                  skin={r.skin}
-                  footer={
-                    r.duplicate ? (
-                      <span className="text-[11px] font-black text-slate-500">
-                        かぶり {r.refund.coins ? `🪙+${r.refund.coins}` : ""}
-                        {r.refund.gems ? `💎+${r.refund.gems}` : ""}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-black text-pink-600">NEW!</span>
-                    )
-                  }
-                />
+                <SkinCard skin={r.skin} level={r.level} footer={<ResultTag result={r} />} />
               </motion.div>
             ))}
           </div>
@@ -172,5 +160,36 @@ export function GachaMachine({
         </div>
       )}
     </motion.div>
+  );
+}
+
+/** 結果カードの下の一言:新しく手に入れた / レベルアップ / 最大レベルで通貨が戻った */
+function ResultTag({ result: r }: { result: GachaResult }) {
+  if (!r.duplicate) {
+    return (
+      <span className="text-xs font-black text-pink-600" data-testid="gacha-tag-new">
+        NEW!
+      </span>
+    );
+  }
+  if (r.level > r.levelBefore) {
+    return (
+      <span className="text-[11px] font-black text-emerald-600" data-testid="gacha-tag-levelup">
+        Lv UP! {r.levelBefore}→{r.level >= MAX_SKIN_LEVEL ? "MAX" : r.level}
+      </span>
+    );
+  }
+  if (r.levelBefore >= MAX_SKIN_LEVEL) {
+    return (
+      <span className="text-[11px] font-black text-slate-500" data-testid="gacha-tag-max">
+        Lv.MAX {r.refund.coins ? `🪙+${r.refund.coins}` : ""}
+        {r.refund.gems ? `💎+${r.refund.gems}` : ""}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[11px] font-black text-slate-500" data-testid="gacha-tag-progress">
+      かぶり(Lv.{r.level} へ前進)
+    </span>
   );
 }

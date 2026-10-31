@@ -38,9 +38,12 @@ export function sessionCoins(s: SessionSummary): number {
   return 10 + s.correct * 2 + s.maxCombo + s.feverCount * 10;
 }
 
-/** 1回のプレイで得る XP。サーバーは1回あたり600までしか受け付けない */
+/** サーバーが1回のプレイで受け付ける XP の上限 */
+export const XP_CAP = 600;
+
+/** 1回のプレイで得る XP。サーバーは1回あたり XP_CAP までしか受け付けない */
 export function sessionXp(s: SessionSummary): number {
-  return Math.min(600, 10 + s.correct * 3 + s.maxCombo + s.feverCount * 15);
+  return Math.min(XP_CAP, 10 + s.correct * 3 + s.maxCombo + s.feverCount * 15);
 }
 
 // ---- レベルとランク ----
