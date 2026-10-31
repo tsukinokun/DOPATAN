@@ -1,6 +1,7 @@
 "use client";
 
 import { ALL_CLEAR_GEMS, dateKey, EMPTY_DAILY, MISSION_GEMS, missionEventId, missionsFor } from "@/lib/economy/rewards";
+import { AnimatedBar } from "@/components/fx/AnimatedBar";
 import { Panel } from "@/components/ui";
 import { useWallet } from "@/stores/wallet";
 
@@ -21,7 +22,7 @@ export function DailyMissions({ now }: { now: number }) {
         </span>
       </div>
       <ul className="flex flex-col gap-2" data-testid="missions">
-        {missions.map((m) => {
+        {missions.map((m, i) => {
           const value = Math.min(m.value(daily), m.target);
           const done = Boolean(ledger[missionEventId(today, m.id)]);
           return (
@@ -33,12 +34,11 @@ export function DailyMissions({ now }: { now: number }) {
                 </span>
                 <span className="text-slate-500">{done ? "受取済" : `💎${MISSION_GEMS}`}</span>
               </div>
-              <div className="h-3 overflow-hidden rounded-full border-2 border-slate-900 bg-slate-100">
-                <div
-                  className={`h-full ${done ? "bg-emerald-400" : "bg-gradient-to-r from-yellow-300 to-pink-400"}`}
-                  style={{ width: `${(value / m.target) * 100}%` }}
-                />
-              </div>
+              <AnimatedBar
+                ratio={value / m.target}
+                className={done ? "bg-emerald-400" : "bg-gradient-to-r from-yellow-300 to-pink-400"}
+                delay={0.2 + i * 0.1}
+              />
             </li>
           );
         })}

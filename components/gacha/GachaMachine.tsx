@@ -6,6 +6,7 @@ import type { GachaResult } from "@/lib/economy/gacha";
 import { sfx } from "@/lib/fx/audio";
 import { burstConfetti, feverConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
 import { MAX_SKIN_LEVEL, RARITY_ORDER, type Rarity } from "@/lib/skins";
+import { Ticker } from "@/components/fx/Ticker";
 import { RARITY_GLOW, SkinCard } from "@/components/skins/SkinCard";
 import { useSettings } from "@/stores/settings";
 
@@ -198,8 +199,8 @@ function ResultTag({ result: r, delay }: { result: GachaResult; delay: number })
   if (r.levelBefore >= MAX_SKIN_LEVEL) {
     return (
       <span className="text-[11px] font-black text-slate-500" data-testid="gacha-tag-max">
-        Lv.MAX {r.refund.coins ? `🪙+${r.refund.coins}` : ""}
-        {r.refund.gems ? `💎+${r.refund.gems}` : ""}
+        Lv.MAX {r.refund.coins ? "🪙+" : "💎+"}
+        <Ticker value={r.refund.coins ?? r.refund.gems ?? 0} from={0} delay={delay - FILL_S} duration={0.5} className="text-amber-600" />
       </span>
     );
   }

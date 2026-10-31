@@ -53,12 +53,20 @@ export function FillBar({
   const last = steps[steps.length - 1];
   const [shown, setShown] = useState(() => (animated ? { level: steps[0].level, ratio: steps[0].from } : { level: last.level, ratio: last.to }));
   const [levelUps, setLevelUps] = useState(0);
-  const width = useMotionValue(shown.ratio);
+  // 値が変わらないときも、表示したときに 0 から伸ばす(数字は最初から最後の値を出す)
+  const [growIn] = useState(() => !animated && effect !== "low" && last.to > 0);
+  const width = useMotionValue(growIn ? 0 : shown.ratio);
   const widthPercent = useTransform(width, (v) => `${v * 100}%`);
   const onLevelUpRef = useRef(onLevelUp);
   useEffect(() => {
     onLevelUpRef.current = onLevelUp;
   });
+
+  useEffect(() => {
+    if (!growIn) return;
+    const controls = animate(width, last.to, { duration: 0.7, delay, ease: [0.22, 1.2, 0.36, 1] });
+    return () => controls.stop();
+  }, [delay, growIn, last.to, width]);
 
   useEffect(() => {
     if (!animated) return;

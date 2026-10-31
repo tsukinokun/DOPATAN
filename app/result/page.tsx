@@ -1,6 +1,6 @@
 "use client";
 
-import { animate, motion, useMotionValue, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { speak } from "@/lib/fx/audio";
 import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
@@ -11,6 +11,7 @@ import { WordImage } from "@/components/game/cards";
 import { totalXp, type LedgerEvent } from "@/lib/economy/ledger";
 import { levelFromXp, rankFor, xpForLevel } from "@/lib/economy/rewards";
 import { FillBar } from "@/components/fx/FillBar";
+import { Ticker } from "@/components/fx/Ticker";
 import type { FillPoint } from "@/lib/fx/fill";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { useWallet } from "@/stores/wallet";
@@ -73,7 +74,13 @@ function ResultView({ result }: { result: SessionResult }) {
           </span>
         )}
         <span className="text-xs font-black text-slate-500">SCORE</span>
-        <CountUp value={result.score} />
+        <Ticker
+          value={result.score}
+          from={0}
+          duration={1.2}
+          testId="result-score"
+          className="text-5xl font-black tabular-nums text-pink-500"
+        />
         <div className="mt-2 grid w-full grid-cols-3 text-center">
           <Mini label="正解率" value={`${accuracy}%`} />
           <Mini label="最大コンボ" value={`${result.maxCombo}`} />
@@ -140,30 +147,6 @@ function ResultView({ result }: { result: SessionResult }) {
   );
 }
 
-function CountUp({
-  value,
-  delay = 0,
-  testId = "result-score",
-  className = "text-5xl font-black tabular-nums text-pink-500",
-}: {
-  value: number;
-  delay?: number;
-  testId?: string;
-  className?: string;
-}) {
-  const count = useMotionValue(0);
-  const text = useTransform(count, (v) => Math.round(v).toLocaleString());
-  useEffect(() => {
-    const controls = animate(count, value, { duration: 1.2, ease: "easeOut", delay });
-    return () => controls.stop();
-  }, [count, delay, value]);
-  return (
-    <motion.span data-testid={testId} className={className}>
-      {text}
-    </motion.span>
-  );
-}
-
 function Mini({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
@@ -200,7 +183,7 @@ function XpGain({ events }: { events: LedgerEvent[] }) {
       <div className="flex items-baseline justify-between">
         <h2 className="font-black">経験値</h2>
         <span className="text-xl font-black text-amber-500">
-          ⭐ +<CountUp value={gained} delay={XP_FILL_DELAY_S} testId="xp-gained" className="tabular-nums" />
+          ⭐ +<Ticker value={gained} from={0} delay={XP_FILL_DELAY_S} duration={1.2} testId="xp-gained" className="tabular-nums" />
           XP
         </span>
       </div>
