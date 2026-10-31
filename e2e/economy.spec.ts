@@ -95,8 +95,22 @@ test("duplicates level up a skin and equipped perks are summed", async ({ page }
   const card = page.getByTestId("skin-bg-gold");
   await expect(card.getByTestId("level-badge")).toHaveText("Lv.2");
   await expect(card.getByTestId("perk-text")).toHaveText("🪙 コイン +18%");
-  await expect(card).toContainText("あと1枚で Lv.3");
+  await expect(card.getByTestId("level-progress")).toContainText("Lv.2→3");
+  await expect(card.getByTestId("level-progress-count")).toHaveText("1/2");
   await expect(page.getByTestId("equipped-perks")).toContainText("🪙 コイン +0%");
   await page.getByTestId("equip-bg-gold").click();
   await expect(page.getByTestId("equipped-perks")).toContainText("🪙 コイン +18%");
+});
+
+test("the collection splits skins into category tabs", async ({ page }) => {
+  await seedWallet(page);
+  await page.goto("/collection");
+  await expect(page.getByTestId("skin-bg-default")).toBeVisible();
+  await expect(page.getByTestId("skin-fx-default")).toHaveCount(0);
+  await page.getByTestId("skin-tab-effect").click();
+  await expect(page.getByTestId("skin-fx-default")).toBeVisible();
+  await expect(page.getByTestId("skin-bg-default")).toHaveCount(0);
+  await page.getByTestId("skin-tab-sound").click();
+  await expect(page.getByTestId("skin-snd-default")).toBeVisible();
+  await expect(page.getByTestId("skin-tab-sound")).toContainText("1/11");
 });

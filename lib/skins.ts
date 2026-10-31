@@ -126,6 +126,14 @@ export function copiesToNext(copies: number): number | null {
   return LEVEL_COPIES[level] - copies;
 }
 
+/** 次のレベルまでの進み具合。今のレベルになってから集めた枚数と、次に必要な枚数(最大レベルなら null) */
+export function levelProgress(copies: number): { have: number; need: number } | null {
+  const level = skinLevel(copies);
+  if (level <= 0 || level >= MAX_SKIN_LEVEL) return null;
+  const from = LEVEL_COPIES[level - 1];
+  return { have: copies - from, need: LEVEL_COPIES[level] - from };
+}
+
 /** Lv1 での効果の大きさ(%) */
 export const PERK_BASE: Record<Rarity, number> = { N: 3, R: 5, SR: 8, SSR: 12 };
 

@@ -4,6 +4,7 @@ import { pointsFor } from "@/lib/score";
 import {
   copiesToNext,
   DEFAULT_SKINS,
+  levelProgress,
   LEVEL_COPIES,
   MAX_SKIN_LEVEL,
   PERK_KINDS,
@@ -94,6 +95,7 @@ describe("gacha", () => {
         expect(r.duplicate).toBe(before > 0);
         expect(r.levelBefore).toBe(skinLevel(before));
         expect(r.level).toBe(skinLevel(before + 1));
+        expect(r.copies).toBe(before + 1);
         expect(r.refund).toEqual({});
         seen.set(r.skin.id, before + 1);
         if (r.duplicate) found = true;
@@ -208,6 +210,17 @@ describe("skin levels and perks", () => {
     expect(copiesToNext(11)).toBeNull();
     const steps = LEVEL_COPIES.slice(1).map((n, i) => n - LEVEL_COPIES[i]);
     for (let i = 1; i < steps.length; i++) expect(steps[i]).toBeGreaterThan(steps[i - 1]);
+  });
+
+  it("shows progress toward the next level", () => {
+    expect(levelProgress(0)).toBeNull();
+    expect(levelProgress(1)).toEqual({ have: 0, need: 1 });
+    expect(levelProgress(2)).toEqual({ have: 0, need: 2 });
+    expect(levelProgress(3)).toEqual({ have: 1, need: 2 });
+    expect(levelProgress(4)).toEqual({ have: 0, need: 3 });
+    expect(levelProgress(7)).toEqual({ have: 0, need: 4 });
+    expect(levelProgress(10)).toEqual({ have: 3, need: 4 });
+    expect(levelProgress(11)).toBeNull();
   });
 
   it("counts copies from the ledger", () => {

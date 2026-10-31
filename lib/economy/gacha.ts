@@ -53,6 +53,8 @@ export type GachaResult = {
   /** 引く前と引いた後のレベル(新しく手に入れたときは 0 → 1) */
   levelBefore: number;
   level: number;
+  /** 引いた後の枚数(レベルの進み具合の表示に使う) */
+  copies: number;
   refund: Price;
 };
 
@@ -98,6 +100,7 @@ export function rollGacha(
       duplicate: before > 0,
       levelBefore,
       level: skinLevel(before + 1),
+      copies: before + 1,
       refund: maxed ? (GACHAS[kind].refund[rarity] ?? {}) : {},
     };
   });
