@@ -11,6 +11,7 @@ import { CurrencyBar } from "@/components/economy/CurrencyBar";
 import { DailyMissions } from "@/components/economy/DailyMissions";
 import { LoginBonus } from "@/components/economy/LoginBonus";
 import { EventBanner } from "@/components/events/EventBanner";
+import { useNewsList } from "@/components/news/useNewsList";
 import { usePendingPresents } from "@/components/presents/usePresents";
 import { LevelBar, SocialNotices } from "@/components/social/common";
 import { Chip, Hydrated, Panel, PopButton } from "@/components/ui";
@@ -47,12 +48,13 @@ function Home() {
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 12 }}
         >
-          <Image src="/logo.svg" alt="DOPATAN" width={240} height={60} priority className="h-auto w-[180px] sm:w-[240px]" />
+          <Image src="/logo.svg" alt="DOPATAN" width={240} height={60} priority className="h-auto w-[150px] sm:w-[240px]" />
         </motion.div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 gap-1.5">
+          <NewsButton />
           <PresentsButton />
           <ProfileButton />
-          <PopButton href="/settings" color="white" className="px-3 py-2" testId="open-settings">
+          <PopButton href="/settings" color="white" className="h-11 w-11 !px-0 !py-0" testId="open-settings">
             ⚙️
           </PopButton>
         </div>
@@ -160,11 +162,33 @@ function Stat({
 }
 
 /** プロフィール(名前・記録・ログイン)への入口 */
+/** お知らせ。未読があれば数を出す */
+function NewsButton() {
+  const { unread } = useNewsList();
+  return (
+    <PopButton href="/news" color="white" className="relative h-11 w-11 !px-0 !py-0" testId="open-news">
+      📢
+      {unread > 0 && (
+        <motion.span
+          key={unread}
+          initial={{ scale: 0 }}
+          animate={{ scale: [0, 1.4, 1] }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="absolute -right-2 -top-2 grid h-6 min-w-6 place-items-center rounded-full border-2 border-slate-900 bg-pink-500 px-1 text-xs text-white"
+          data-testid="news-badge"
+        >
+          {unread}
+        </motion.span>
+      )}
+    </PopButton>
+  );
+}
+
 /** プレゼントボックス。未受け取りがあれば数を出す */
 function PresentsButton() {
   const { pending } = usePendingPresents();
   return (
-    <PopButton href="/presents" color="white" className="relative px-3 py-2" testId="open-presents">
+    <PopButton href="/presents" color="white" className="relative h-11 w-11 !px-0 !py-0" testId="open-presents">
       🎁
       {pending.length > 0 && (
         <motion.span
@@ -184,7 +208,7 @@ function PresentsButton() {
 
 function ProfileButton() {
   return (
-    <PopButton href="/profile" color="white" className="px-3 py-2" testId="open-profile">
+    <PopButton href="/profile" color="white" className="h-11 w-11 !px-0 !py-0" testId="open-profile">
       👤
     </PopButton>
   );

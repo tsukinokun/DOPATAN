@@ -157,3 +157,38 @@ test("Escape closes the pause dialog", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("pause-dialog")).toHaveCount(0);
 });
+
+/** 本物のタッチ操作でドラッグする(hold ミリ秒長押ししてから動かす) */
+async function touchDragTo(page: Page, targetTestId: string, hold = 0) {
+  const cdp = await page.context().newCDPSession(page);
+  const source = await page.getByTestId("drag-source").boundingBox();
+  const target = await page.getByTestId(targetTestId).first().boundingBox();
+  if (!source || !target) throw new Error("board not ready");
+  const [sx, sy] = [source.x + source.width / 2, source.y + source.height / 2];
+  const [ex, ey] = [target.x + target.width / 2, target.y + target.height / 2];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: sx, y: sy }] });
+  if (hold) await page.waitForTimeout(hold);
+  for (let i = 1; i <= 12; i++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: sx + ((ex - sx) * i) / 12, y: sy + ((ey - sy) * i) / 12 }],
+    });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+}
+
+test("touch swipes answer questions, even after holding the card", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "タッチ操作はスマホの設定だけで確かめる");
+  await startGame(page);
+  for (const hold of [0, 700, 0, 700]) {
+    await waitForQuestion(page);
+    const before = Number((await page.getByTestId("score").textContent())!.replace(/,/g, ""));
+    await touchDragTo(page, "drop-correct", hold);
+    await expect
+      .poll(async () => Number((await page.getByTestId("score").textContent())!.replace(/,/g, "")))
+      .toBeGreaterThan(before);
+    await page.waitForTimeout(700);
+  }
+});

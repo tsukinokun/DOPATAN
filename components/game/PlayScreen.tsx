@@ -249,7 +249,11 @@ export function PlayScreen() {
       } else {
         stats.current.wrong++;
         setCombo(0);
-        playSound(() => sfx.wrong());
+        playSound(() => {
+          sfx.wrong();
+          // 間違えたときも、正解の単語の発音を聞かせる
+          setTimeout(() => speak(question.target.word), 400);
+        });
         vibrate([70, 40, 70]);
         const amplitude = level === "max" ? 18 : level === "standard" ? 8 : 0;
         if (amplitude) {
@@ -282,7 +286,12 @@ export function PlayScreen() {
 
   // スワイプ中にブラウザの「引っ張って更新」やスクロールが起きないよう、画面全体のタッチ操作を止める
   return (
-    <motion.main animate={shake} className="relative flex min-h-dvh touch-none flex-col overscroll-none">
+    // スマホで長押しすると文字の選択や画像のメニューが始まってドラッグが止まるので、ゲーム中は出さない
+    <motion.main
+      animate={shake}
+      onContextMenu={(e) => e.preventDefault()}
+      className="relative flex min-h-dvh touch-none select-none flex-col overscroll-none [-webkit-touch-callout:none] [-webkit-user-select:none]"
+    >
       <FeverOverlay active={fever} intense={level === "max"} />
       <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col">
         <Hud

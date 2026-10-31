@@ -67,6 +67,7 @@ beforeAll(async () => {
   await db.exec(migration("0003_social.sql"));
   await db.exec(migration("0004_short_sessions.sql"));
   await db.exec(migration("0005_presents.sql"));
+  await db.exec(migration("0006_news_push.sql"));
   // Supabase の「Automatically expose new tables」がオンの状態を再現する(RLS だけで守れているかを見る)
   await db.exec(`grant usage on schema public to authenticated; grant all on all tables in schema public to authenticated;`);
 }, 60_000);
@@ -80,6 +81,7 @@ describe("migration", () => {
     await db.exec(migration("0003_social.sql"));
     await db.exec(migration("0004_short_sessions.sql"));
     await db.exec(migration("0005_presents.sql"));
+    await db.exec(migration("0006_news_push.sql"));
   });
 });
 
@@ -345,5 +347,79 @@ describe("presents", () => {
     } finally {
       await db.exec(`reset role`);
     }
+  });
+});
+
+describe("news and push", () => {
+  /** ゲスト(anon)として実行する */
+  async function asAnon<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+    await db.exec(`set role anon`);
+    try {
+      return (await db.query<T>(sql, params)).rows;
+    } finally {
+      await db.exec(`reset role`);
+    }
+  }
+  const SECRET = "test-push-secret-123456";
+
+  it("lets guests and members save subscriptions, linking members to their account", async () => {
+    const u = await addUser();
+    await asAnon(`select public.save_push_subscription('https://push.example/guest', 'k1', 'a1')`);
+    await as(u, `select public.save_push_subscription('https://push.example/member', 'k2', 'a2')`);
+    // ゲストで登録した端末に、あとからログインした
+    await as(u, `select public.save_push_subscription('https://push.example/guest', 'k1', 'a1')`);
+    const rows = await db.query<{ endpoint: string; user_id: string | null }>(
+      `select endpoint, user_id from public.push_subscriptions where endpoint like 'https://push.example/%' order by endpoint`,
+    );
+    expect(rows.rows).toEqual([
+      { endpoint: "https://push.example/guest", user_id: u },
+      { endpoint: "https://push.example/member", user_id: u },
+    ]);
+    await expect(asAnon(`select public.save_push_subscription('javascript:alert(1)', 'k', 'a')`)).rejects.toThrow(/invalid_endpoint/);
+    await asAnon(`select public.delete_push_subscription('https://push.example/member')`);
+    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://push.example/member'`)).rows).toEqual([]);
+  });
+
+  it("keeps subscriptions and announcements out of direct reach", async () => {
+    const u = await addUser();
+    expect(await as(u, `select * from public.push_subscriptions`)).toEqual([]);
+    expect(await as(u, `select * from public.announcements`)).toEqual([]);
+    await expect(asAnon(`select * from dopatan_private.push_config`)).rejects.toThrow(/permission denied/);
+  });
+
+  it("lists only live announcements, for guests too", async () => {
+    await db.query(`insert into public.announcements (title, body, starts_at, expires_at) values
+      ('公開中', '本文', '2026-10-19T00:00:00+09:00', null),
+      ('予約', '本文', '2026-10-30T00:00:00+09:00', null),
+      ('終了', '本文', '2026-10-01T00:00:00+09:00', '2026-10-10T00:00:00+09:00')`);
+    const list = (await asAnon<{ r: { title: string }[] }>(`select public.list_announcements() as r`))[0].r.map((a) => a.title);
+    expect(list).toContain("公開中");
+    expect(list).not.toContain("予約");
+    expect(list).not.toContain("終了");
+  });
+
+  it("hands out the push batch only with the secret, and only once per item", async () => {
+    await db.query(`insert into dopatan_private.push_config (secret) values ($1) on conflict do nothing`, [SECRET]);
+    await db.query(`insert into public.announcements (title, body, notify, starts_at) values ('通知する', '本文', true, '2026-10-19T00:00:00+09:00')`);
+    await db.query(`select dopatan_private.send_present(null, '全員にプレゼント', null, 0, 10, 0, null, null)`);
+    await asAnon(`select public.save_push_subscription('https://push.example/batch', 'k', 'a')`);
+
+    expect((await asAnon<{ r: unknown }>(`select public.push_batch('wrong-secret-wrong') as r`))[0].r).toBeNull();
+    expect((await asAnon<{ r: unknown }>(`select public.push_batch(null) as r`))[0].r).toBeNull();
+
+    type Batch = { subscriptions: { endpoint: string }[]; announcements: { title: string }[]; presents: { title: string }[] };
+    const first = (await asAnon<{ r: Batch }>(`select public.push_batch($1) as r`, [SECRET]))[0].r;
+    expect(first.subscriptions.map((s) => s.endpoint)).toContain("https://push.example/batch");
+    expect(first.announcements.map((a) => a.title)).toContain("通知する");
+    expect(first.presents.map((p) => p.title)).toContain("全員にプレゼント");
+
+    const second = (await asAnon<{ r: Batch }>(`select public.push_batch($1) as r`, [SECRET]))[0].r;
+    expect(second.announcements).toEqual([]);
+    expect(second.presents).toEqual([]);
+
+    await asAnon(`select public.push_remove('nope-nope-nope-nope', array['https://push.example/batch'])`);
+    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://push.example/batch'`)).rows).toHaveLength(1);
+    await asAnon(`select public.push_remove($1, array['https://push.example/batch'])`, [SECRET]);
+    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://push.example/batch'`)).rows).toEqual([]);
   });
 });
