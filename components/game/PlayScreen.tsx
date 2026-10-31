@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bgm, preloadVoice, sfx, speak, unlockAudio } from "@/lib/fx/audio";
 import { burstConfetti, feverConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
+import { equippedPerks } from "@/lib/economy/perks";
+import { pointsFor } from "@/lib/score";
+import { skinCopies } from "@/lib/economy/ledger";
 import { SessionEngine, type Question } from "@/lib/session";
 import { filterScope, getWords } from "@/lib/words";
 import { useProgress, type AnswerLog } from "@/stores/progress";
@@ -29,11 +32,6 @@ const TIME_UP_DELAY = 1800;
 
 type Phase = "countdown" | "playing" | "timeup";
 
-function pointsFor(combo: number, fever: boolean, intro: boolean): number {
-  const base = intro ? 50 : 100 + Math.min(combo, 50) * 10;
-  return base * (fever ? 3 : 1);
-}
-
 export function PlayScreen() {
   const router = useRouter();
   const level = useEffectLevel();
@@ -51,6 +49,12 @@ export function PlayScreen() {
       now: Date.now(),
       rng: Math.random,
     });
+  });
+
+  // スキン効果はプレイ開始時のものを最後まで使う
+  const [perks] = useState(() => {
+    const { equipped, ledger } = useWallet.getState();
+    return equippedPerks(equipped, skinCopies(ledger));
   });
 
   const [phase, setPhase] = useState<Phase>("countdown");
@@ -217,7 +221,7 @@ export function PlayScreen() {
         stats.current.correct++;
         if (question.isIntro) stats.current.newWords++;
         const nextCombo = question.isIntro ? combo : combo + 1;
-        const points = pointsFor(nextCombo, fever, question.isIntro);
+        const points = pointsFor(nextCombo, fever, question.isIntro, perks);
         scoreRef.current += points;
         setScore(scoreRef.current);
         setCombo(nextCombo);
@@ -260,7 +264,7 @@ export function PlayScreen() {
         if (timeLeftRef.current > 0) presentQuestion(engine.next());
       }, correct ? NEXT_DELAY_CORRECT : NEXT_DELAY_WRONG);
     },
-    [combo, engine, feedback, fever, later, level, phase, playSound, presentQuestion, question, recordAnswer, shake, showBanner, startFever],
+    [combo, engine, feedback, fever, later, level, perks, phase, playSound, presentQuestion, question, recordAnswer, shake, showBanner, startFever],
   );
 
   const pause = useCallback(() => {

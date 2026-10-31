@@ -4,9 +4,10 @@ import { useState } from "react";
 import { Achievements } from "@/components/economy/Achievements";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
-import { ownedSkins } from "@/lib/economy/ledger";
+import { skinCopies } from "@/lib/economy/ledger";
+import { equippedPerks } from "@/lib/economy/perks";
 import { setSoundSkin, sfx, unlockAudio } from "@/lib/fx/audio";
-import { CATEGORY_LABEL, SKINS, skinOf, type SkinCategory, type SoundLook } from "@/lib/skins";
+import { CATEGORY_LABEL, PERK_KINDS, PERK_LABEL, SKINS, skinOf, type SkinCategory, type SoundLook } from "@/lib/skins";
 import { useWallet } from "@/stores/wallet";
 
 export default function CollectionPage() {
@@ -63,13 +64,27 @@ function Skins() {
   const ledger = useWallet((s) => s.ledger);
   const equipped = useWallet((s) => s.equipped);
   const equip = useWallet((s) => s.equip);
-  const owned = ownedSkins(ledger);
+  const copies = skinCopies(ledger);
+  const perks = equippedPerks(equipped, copies);
 
   return (
     <>
       <p className="text-center text-sm font-black text-white text-stroke">
-        {owned.size} / {SKINS.length} 種類を集めた
+        {copies.size} / {SKINS.length} 種類を集めた
       </p>
+      <Panel className="flex flex-col gap-2" testId="equipped-perks">
+        <h2 className="font-black">装備中のスキン効果</h2>
+        <div className="grid grid-cols-2 gap-1 text-sm font-black">
+          {PERK_KINDS.map((k) => (
+            <span key={k} className={`rounded-lg px-2 py-1 ${perks[k] > 0 ? "bg-emerald-100" : "bg-slate-100 text-slate-400"}`}>
+              {PERK_LABEL[k]} +{perks[k]}%
+            </span>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500">
+          かぶるとスキンのレベルが上がり、効果が強くなります。装備している3つの効果が合計されます。
+        </p>
+      </Panel>
       {(Object.keys(CATEGORY_LABEL) as SkinCategory[]).map((category) => {
         const current = skinOf(category, equipped[category]);
         return (
@@ -77,13 +92,14 @@ function Skins() {
             <h2 className="font-black">{CATEGORY_LABEL[category]}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {SKINS.filter((s) => s.category === category).map((skin) => {
-                const have = owned.has(skin.id);
+                const have = copies.has(skin.id);
                 const isEquipped = current.id === skin.id;
                 return (
                   <SkinCard
                     key={skin.id}
                     skin={skin}
                     locked={!have}
+                    copies={copies.get(skin.id)}
                     footer={
                       have && (
                         <div className="mt-auto flex gap-1">

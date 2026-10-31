@@ -1,5 +1,5 @@
 import type { Rng } from "@/lib/random";
-import { DEFAULT_SKINS, RARITY_ORDER, SKINS, type Rarity, type Skin } from "@/lib/skins";
+import { DEFAULT_SKINS, MAX_SKIN_LEVEL, RARITY_ORDER, SKINS, skinLevel, type Rarity, type Skin } from "@/lib/skins";
 
 export type GachaKind = "normal" | "rare";
 export type Price = { coins?: number; gems?: number };
@@ -9,7 +9,7 @@ export type GachaDef = {
   single: Price;
   ten: Price;
   rates: Partial<Record<Rarity, number>>;
-  /** 持っているスキンが出たときに返す通貨 */
+  /** 最大レベルのスキンが出たときに返す通貨 */
   refund: Partial<Record<Rarity, Price>>;
 };
 
@@ -47,7 +47,14 @@ export function skinRates(kind: GachaKind): { skin: Skin; rate: number }[] {
   });
 }
 
-export type GachaResult = { skin: Skin; duplicate: boolean; refund: Price };
+export type GachaResult = {
+  skin: Skin;
+  duplicate: boolean;
+  /** 引く前と引いた後のレベル(新しく手に入れたときは 0 → 1) */
+  levelBefore: number;
+  level: number;
+  refund: Price;
+};
 
 function rollRarity(kind: GachaKind, rng: Rng, minimum?: Rarity): Rarity {
   const entries = RARITY_ORDER.filter(
@@ -65,20 +72,34 @@ const isSrOrBetter = (r: Rarity) => RARITY_ORDER.indexOf(r) >= RARITY_ORDER.inde
 
 /**
  * count 回引く。10連は SR 以上が最低1つ出る。
- * 持っているスキン(同じ10連の中で先に出たものも含む)は duplicate になり、通貨が一部返る。
+ * 持っているスキン(同じ10連の中で先に出たものも含む)は duplicate になり、レベルが上がる。
+ * すでに最大レベルのスキンなら、代わりに通貨が一部返る。
  */
-export function rollGacha(kind: GachaKind, count: 1 | 10, owned: ReadonlySet<string>, rng: Rng): GachaResult[] {
+export function rollGacha(
+  kind: GachaKind,
+  count: 1 | 10,
+  copies: ReadonlyMap<string, number>,
+  rng: Rng,
+): GachaResult[] {
   const rarities = Array.from({ length: count }, () => rollRarity(kind, rng));
   if (count === 10 && !rarities.some(isSrOrBetter)) {
     rarities[rarities.length - 1] = rollRarity(kind, rng, "SR");
   }
-  const have = new Set(owned);
+  const have = new Map(copies);
   return rarities.map((rarity) => {
     const pool = poolOf(kind, rarity);
     const skin = pool[Math.floor(rng() * pool.length)];
-    const duplicate = have.has(skin.id);
-    have.add(skin.id);
-    return { skin, duplicate, refund: duplicate ? (GACHAS[kind].refund[rarity] ?? {}) : {} };
+    const before = have.get(skin.id) ?? 0;
+    have.set(skin.id, before + 1);
+    const levelBefore = skinLevel(before);
+    const maxed = levelBefore >= MAX_SKIN_LEVEL;
+    return {
+      skin,
+      duplicate: before > 0,
+      levelBefore,
+      level: skinLevel(before + 1),
+      refund: maxed ? (GACHAS[kind].refund[rarity] ?? {}) : {},
+    };
   });
 }
 

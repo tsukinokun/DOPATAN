@@ -48,8 +48,16 @@ export function RewardList({ events }: { events: LedgerEvent[] }) {
             transition={{ delay: 0.4 + i * STEP_SECONDS, type: "spring", stiffness: 500, damping: 20 }}
             className="flex items-center justify-between gap-2 rounded-xl bg-yellow-50 px-3 py-1 text-sm font-black"
           >
-            <span className="min-w-0 truncate">
-              {iconFor(e)} {e.label}
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">
+                {iconFor(e)} {e.label}
+              </span>
+              {(e.bonusCoins || e.bonusXp) && (
+                <span className="text-[11px] text-emerald-700" data-testid="skin-bonus">
+                  ✨ スキン効果 {e.bonusCoins ? `🪙+${e.bonusCoins} ` : ""}
+                  {e.bonusXp ? `⭐+${e.bonusXp}XP` : ""}
+                </span>
+              )}
             </span>
             <span className="shrink-0">
               {e.coins ? `🪙+${e.coins}` : ""}

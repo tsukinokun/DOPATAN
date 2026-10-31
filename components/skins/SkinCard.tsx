@@ -1,4 +1,4 @@
-import type { Rarity, Skin } from "@/lib/skins";
+import { copiesToNext, MAX_SKIN_LEVEL, PERK_LABEL, perkPercent, skinLevel, type Rarity, type Skin } from "@/lib/skins";
 
 export const RARITY_STYLE: Record<Rarity, string> = {
   N: "bg-slate-200 text-slate-700",
@@ -49,7 +49,48 @@ export function SkinPreview({ skin, locked = false }: { skin: Skin; locked?: boo
   return <div className="grid h-full w-full place-items-center bg-indigo-100 text-3xl">🔊</div>;
 }
 
-export function SkinCard({ skin, locked = false, footer }: { skin: Skin; locked?: boolean; footer?: React.ReactNode }) {
+/** レベルのバッジ。最大レベルは虹色 */
+export function LevelBadge({ level }: { level: number }) {
+  const max = level >= MAX_SKIN_LEVEL;
+  return (
+    <span
+      className={`rounded-md border-2 border-slate-900 px-1.5 text-xs font-black ${max ? "rainbow-bg text-white text-stroke" : "bg-white"}`}
+      data-testid="level-badge"
+    >
+      {max ? "Lv.MAX" : `Lv.${level}`}
+    </span>
+  );
+}
+
+/** 効果の説明。level を渡すとそのレベルでの値、渡さなければ Lv1 の値を出す */
+export function PerkText({ skin, level = 1 }: { skin: Skin; level?: number }) {
+  if (!skin.perk) return <span className="text-[11px] font-black text-slate-400">効果なし</span>;
+  return (
+    <span className="text-[11px] font-black text-emerald-700" data-testid="perk-text">
+      {PERK_LABEL[skin.perk]} +{perkPercent(skin, level)}%
+    </span>
+  );
+}
+
+/**
+ * スキンのカード。copies(持っている枚数)を渡すと、レベルと次のレベルまでの枚数も出す。
+ * level だけを渡すと、そのレベルでの効果を出す(ガチャの結果用)。
+ */
+export function SkinCard({
+  skin,
+  locked = false,
+  copies,
+  level: levelProp,
+  footer,
+}: {
+  skin: Skin;
+  locked?: boolean;
+  copies?: number;
+  level?: number;
+  footer?: React.ReactNode;
+}) {
+  const level = levelProp ?? (copies === undefined ? 0 : skinLevel(copies));
+  const toNext = copies === undefined ? null : copiesToNext(copies);
   return (
     <div className="pop-border flex flex-col overflow-hidden rounded-2xl bg-white" data-testid={`skin-${skin.id}`}>
       <div className="relative h-20">
@@ -57,10 +98,21 @@ export function SkinCard({ skin, locked = false, footer }: { skin: Skin; locked?
         <span className="absolute left-1 top-1">
           <RarityBadge rarity={skin.rarity} />
         </span>
+        {!locked && level > 0 && skin.perk && (
+          <span className="absolute right-1 top-1">
+            <LevelBadge level={level} />
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-2">
         <span className="text-sm font-black leading-tight">{locked ? "???" : skin.name}</span>
         {!locked && <span className="text-[11px] leading-tight text-slate-500">{skin.description}</span>}
+        {skin.perk && <PerkText skin={skin} level={locked ? 1 : Math.max(1, level)} />}
+        {!locked && skin.perk && toNext !== null && level > 0 && (
+          <span className="text-[10px] font-black text-slate-500">
+            あと{toNext}枚で Lv.{level + 1}
+          </span>
+        )}
         {footer}
       </div>
     </div>

@@ -16,6 +16,9 @@ export type LedgerEvent = {
   fevers?: number;
   /** プレイ報酬のときの XP(レベルの計算に使う) */
   xp?: number;
+  /** プレイ報酬のうち、スキン効果で増えた分(表示用) */
+  bonusCoins?: number;
+  bonusXp?: number;
 };
 
 export type Ledger = Record<string, LedgerEvent>;
@@ -34,6 +37,13 @@ export function ownedSkins(ledger: Ledger): Set<string> {
   const owned = new Set<string>(Object.values(DEFAULT_SKINS));
   for (const e of Object.values(ledger)) if (e.skin) owned.add(e.skin);
   return owned;
+}
+
+/** スキンごとの枚数(初期スキンは1枚)。かぶった分も数えるので、レベルの計算に使う */
+export function skinCopies(ledger: Ledger): Map<string, number> {
+  const copies = new Map<string, number>(Object.values(DEFAULT_SKINS).map((id) => [id, 1]));
+  for (const e of Object.values(ledger)) if (e.skin) copies.set(e.skin, (copies.get(e.skin) ?? 0) + 1);
+  return copies;
 }
 
 export function totalFevers(ledger: Ledger): number {

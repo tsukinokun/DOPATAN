@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { seededRng } from "@/lib/random";
-import { DEFAULT_SKINS } from "@/lib/skins";
+import { pointsFor } from "@/lib/score";
+import {
+  copiesToNext,
+  DEFAULT_SKINS,
+  LEVEL_COPIES,
+  MAX_SKIN_LEVEL,
+  PERK_KINDS,
+  perkPercent,
+  SKINS,
+  skinLevel,
+  skinOf,
+} from "@/lib/skins";
 import { GACHAS, rollGacha, skinRates } from "./gacha";
-import { balance, mergeLedgers, ownedSkins, type Ledger } from "./ledger";
+import { balance, mergeLedgers, ownedSkins, skinCopies, type Ledger } from "./ledger";
+import { applyPercent, equippedPerks, NO_PERKS } from "./perks";
 import {
   ACHIEVEMENTS,
   currentStreak,
@@ -56,7 +68,7 @@ describe("gacha", () => {
     const rng = seededRng(7);
     const counts: Record<string, number> = {};
     for (let i = 0; i < 20000; i++) {
-      const [r] = rollGacha("rare", 1, new Set(), rng);
+      const [r] = rollGacha("rare", 1, new Map(), rng);
       counts[r.skin.rarity] = (counts[r.skin.rarity] ?? 0) + 1;
     }
     expect(counts.SSR / 20000).toBeCloseTo(GACHAS.rare.rates.SSR!, 1);
@@ -66,21 +78,37 @@ describe("gacha", () => {
 
   it("guarantees SR or better in a 10-pull", () => {
     for (let seed = 0; seed < 300; seed++) {
-      const results = rollGacha("normal", 10, new Set(), seededRng(seed));
+      const results = rollGacha("normal", 10, new Map(), seededRng(seed));
       expect(results).toHaveLength(10);
       expect(results.some((r) => r.skin.rarity === "SR" || r.skin.rarity === "SSR")).toBe(true);
     }
   });
 
-  it("refunds duplicates, including ones drawn earlier in the same 10-pull", () => {
-    const results = rollGacha("normal", 10, new Set(), seededRng(3));
-    const seen = new Set<string>();
-    for (const r of results) {
-      expect(r.duplicate).toBe(seen.has(r.skin.id));
-      expect(r.refund.coins ?? 0).toBe(r.duplicate ? 20 : 0);
-      seen.add(r.skin.id);
+  it("levels up duplicates (including ones earlier in the same 10-pull) and refunds only at max level", () => {
+    let found = false;
+    for (let seed = 0; seed < 50 && !found; seed++) {
+      const results = rollGacha("normal", 10, new Map(), seededRng(seed));
+      const seen = new Map<string, number>();
+      for (const r of results) {
+        const before = seen.get(r.skin.id) ?? 0;
+        expect(r.duplicate).toBe(before > 0);
+        expect(r.levelBefore).toBe(skinLevel(before));
+        expect(r.level).toBe(skinLevel(before + 1));
+        expect(r.refund).toEqual({});
+        seen.set(r.skin.id, before + 1);
+        if (r.duplicate) found = true;
+      }
     }
-    expect(results.some((r) => r.duplicate)).toBe(true);
+    expect(found).toBe(true);
+  });
+
+  it("refunds when a max-level skin is drawn again", () => {
+    const maxed = new Map(SKINS.map((s) => [s.id, LEVEL_COPIES[MAX_SKIN_LEVEL - 1]]));
+    for (const r of rollGacha("normal", 10, maxed, seededRng(1))) {
+      expect(r.levelBefore).toBe(MAX_SKIN_LEVEL);
+      expect(r.level).toBe(MAX_SKIN_LEVEL);
+      expect(r.refund.coins).toBe(20);
+    }
   });
 
   it("never gives default skins", () => {
@@ -168,5 +196,65 @@ describe("recentDays", () => {
     expect(days[29]).toEqual({ date: "2026-10-22", sessions: 2, correct: 40 });
     expect(days.find((d) => d.date === "2026-10-01")?.correct).toBe(7);
     expect(days.reduce((sum, d) => sum + d.correct, 0)).toBe(47);
+  });
+});
+
+describe("skin levels and perks", () => {
+  it("needs more duplicates for each higher level", () => {
+    expect([0, 1, 2, 3, 4, 6, 7, 10, 11, 99].map(skinLevel)).toEqual([0, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+    expect(copiesToNext(1)).toBe(1);
+    expect(copiesToNext(2)).toBe(2);
+    expect(copiesToNext(7)).toBe(4);
+    expect(copiesToNext(11)).toBeNull();
+    const steps = LEVEL_COPIES.slice(1).map((n, i) => n - LEVEL_COPIES[i]);
+    for (let i = 1; i < steps.length; i++) expect(steps[i]).toBeGreaterThan(steps[i - 1]);
+  });
+
+  it("counts copies from the ledger", () => {
+    const ledger: Ledger = {
+      a: { id: "a", at: 1, label: "", skin: "bg-mint" },
+      b: { id: "b", at: 2, label: "", skin: "bg-mint" },
+      c: { id: "c", at: 3, label: "", skin: "fx-fire" },
+    };
+    const copies = skinCopies(ledger);
+    expect(copies.get("bg-mint")).toBe(2);
+    expect(copies.get("fx-fire")).toBe(1);
+    expect(copies.get(DEFAULT_SKINS.background)).toBe(1);
+  });
+
+  it("gives every gacha skin a perk, keeps defaults plain, and uses unique ids", () => {
+    const defaults = new Set(Object.values(DEFAULT_SKINS));
+    for (const s of SKINS) expect(Boolean(s.perk)).toBe(!defaults.has(s.id));
+    expect(new Set(SKINS.map((s) => s.id)).size).toBe(SKINS.length);
+    for (const kind of PERK_KINDS) expect(SKINS.some((s) => s.perk === kind)).toBe(true);
+  });
+
+  it("grows perks with level", () => {
+    const gold = skinOf("background", "bg-gold");
+    expect(perkPercent(gold, 0)).toBe(0);
+    expect(perkPercent(gold, 1)).toBe(12);
+    expect(perkPercent(gold, 5)).toBe(36);
+    expect(perkPercent(skinOf("background", undefined), 5)).toBe(0);
+  });
+
+  it("adds up only the equipped skins", () => {
+    const copies = new Map([
+      ["bg-gold", 2],
+      ["bg-money", 1],
+      ["fx-sushi", 1],
+      ["snd-hyper", 1],
+    ]);
+    const perks = equippedPerks({ background: "bg-gold", effect: "fx-sushi", sound: "snd-hyper" }, copies);
+    expect(perks).toEqual({ coins: 18 + 5, xp: 12, score: 0, combo: 0 });
+    expect(equippedPerks({ background: undefined, effect: undefined, sound: undefined }, copies)).toEqual(NO_PERKS);
+    expect(applyPercent(100, 23)).toBe(123);
+  });
+
+  it("boosts points with score and combo perks", () => {
+    expect(pointsFor(10, false, false)).toBe(200);
+    expect(pointsFor(10, false, false, { score: 0, combo: 50 })).toBe(250);
+    expect(pointsFor(10, false, false, { score: 10, combo: 0 })).toBe(220);
+    expect(pointsFor(10, true, false, { score: 10, combo: 50 })).toBe(825);
+    expect(pointsFor(0, false, true, { score: 10, combo: 50 })).toBe(55);
   });
 });

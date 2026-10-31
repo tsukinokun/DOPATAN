@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { canAfford, GACHAS, rollGacha, type GachaKind, type GachaResult } from "@/lib/economy/gacha";
-import { balance, ownedSkins, totalFevers, type Ledger, type LedgerEvent } from "@/lib/economy/ledger";
+import { balance, ownedSkins, skinCopies, totalFevers, type Ledger, type LedgerEvent } from "@/lib/economy/ledger";
 import {
   addSessionToDaily,
   currentStreak,
@@ -16,7 +16,9 @@ import {
   type AchievementContext,
   type DailyStats,
   type SessionSummary,
+  XP_CAP,
 } from "@/lib/economy/rewards";
+import { applyPercent, equippedPerks } from "@/lib/economy/perks";
 import { EMPTY_WALLET, type WalletData } from "@/lib/economy/walletData";
 import { getSkin, type SkinCategory } from "@/lib/skins";
 import { isMastered } from "@/lib/srs";
@@ -119,13 +121,20 @@ export const useWallet = create<WalletStore>()(
       recordSession: (summary, now) => {
         const state = get();
         const today = dateKey(now);
+        const perks = equippedPerks(state.equipped, skinCopies(state.ledger));
+        const baseCoins = sessionCoins(summary);
+        const baseXp = sessionXp(summary);
+        const coins = applyPercent(baseCoins, perks.coins);
+        const xp = Math.min(XP_CAP, applyPercent(baseXp, perks.xp));
         const sessionEvent: LedgerEvent = {
           id: `session:${newId()}`,
           at: now,
           label: "プレイ報酬",
-          coins: sessionCoins(summary),
+          coins,
           fevers: summary.feverCount,
-          xp: sessionXp(summary),
+          xp,
+          ...(coins > baseCoins && { bonusCoins: coins - baseCoins }),
+          ...(xp > baseXp && { bonusXp: xp - baseXp }),
         };
         const daily = pruneDaily({
           ...state.daily,
@@ -141,7 +150,7 @@ export const useWallet = create<WalletStore>()(
         const state = get();
         const price = count === 10 ? GACHAS[kind].ten : GACHAS[kind].single;
         if (!canAfford(price, balance(state.ledger))) return null;
-        const results = rollGacha(kind, count, ownedSkins(state.ledger), rng);
+        const results = rollGacha(kind, count, skinCopies(state.ledger), rng);
         const pullId = `gacha:${newId()}`;
         const events: LedgerEvent[] = [
           {
