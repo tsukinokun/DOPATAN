@@ -9,7 +9,9 @@ import { getWords } from "@/lib/words";
 import { RewardList } from "@/components/economy/RewardList";
 import { WordImage } from "@/components/game/cards";
 import { totalXp, type LedgerEvent } from "@/lib/economy/ledger";
-import { levelFromXp, rankFor } from "@/lib/economy/rewards";
+import { levelFromXp, rankFor, xpForLevel } from "@/lib/economy/rewards";
+import { FillBar } from "@/components/fx/FillBar";
+import type { FillPoint } from "@/lib/fx/fill";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
 import { useWallet } from "@/stores/wallet";
 import { useProgress, type SessionResult } from "@/stores/progress";
@@ -79,6 +81,7 @@ function ResultView({ result }: { result: SessionResult }) {
         </div>
       </Panel>
 
+      <XpGain events={rewards} />
       <LevelUp events={rewards} />
       <RewardList events={rewards} />
 
@@ -137,15 +140,25 @@ function ResultView({ result }: { result: SessionResult }) {
   );
 }
 
-function CountUp({ value }: { value: number }) {
+function CountUp({
+  value,
+  delay = 0,
+  testId = "result-score",
+  className = "text-5xl font-black tabular-nums text-pink-500",
+}: {
+  value: number;
+  delay?: number;
+  testId?: string;
+  className?: string;
+}) {
   const count = useMotionValue(0);
   const text = useTransform(count, (v) => Math.round(v).toLocaleString());
   useEffect(() => {
-    const controls = animate(count, value, { duration: 1.2, ease: "easeOut" });
+    const controls = animate(count, value, { duration: 1.2, ease: "easeOut", delay });
     return () => controls.stop();
-  }, [count, value]);
+  }, [count, delay, value]);
   return (
-    <motion.span data-testid="result-score" className="text-5xl font-black tabular-nums text-pink-500">
+    <motion.span data-testid={testId} className={className}>
       {text}
     </motion.span>
   );
@@ -157,6 +170,53 @@ function Mini({ label, value }: { label: string; value: string }) {
       <span className="text-xs font-black text-slate-500">{label}</span>
       <span className="text-xl font-black">{value}</span>
     </div>
+  );
+}
+
+const XP_FILL_DELAY_S = 0.5;
+const XP_FILL_STEP_S = 0.7;
+/** 経験値バーが溜まり終わってから大きな LEVEL UP を出す */
+const LEVEL_UP_DELAY_S = 2;
+
+function xpPoint(xp: number): FillPoint {
+  const level = levelFromXp(xp);
+  const from = xpForLevel(level);
+  return { level, ratio: (xp - from) / (xpForLevel(level + 1) - from) };
+}
+
+function xpCount(level: number, ratio: number): string {
+  const need = xpForLevel(level + 1) - xpForLevel(level);
+  return `${Math.round(ratio * need)} / ${need} XP`;
+}
+
+/** 今回もらった経験値で、レベルのバーが溜まっていく */
+function XpGain({ events }: { events: LedgerEvent[] }) {
+  const ledger = useWallet((s) => s.ledger);
+  const gained = events.reduce((sum, e) => sum + (e.xp ?? 0), 0);
+  if (gained === 0) return null;
+  const total = totalXp(ledger);
+  return (
+    <Panel className="flex flex-col gap-3" testId="xp-bar">
+      <div className="flex items-baseline justify-between">
+        <h2 className="font-black">経験値</h2>
+        <span className="text-xl font-black text-amber-500">
+          ⭐ +<CountUp value={gained} delay={XP_FILL_DELAY_S} testId="xp-gained" className="tabular-nums" />
+          XP
+        </span>
+      </div>
+      <FillBar
+        start={xpPoint(total - gained)}
+        end={xpPoint(total)}
+        delay={XP_FILL_DELAY_S}
+        stepSeconds={XP_FILL_STEP_S}
+        size="lg"
+        label={(level) => <span data-testid="xp-level">Lv.{level}</span>}
+        count={xpCount}
+      />
+      <span className="text-right text-xs font-black text-slate-500">
+        次のレベルまで あと {xpForLevel(levelFromXp(total) + 1) - total} XP
+      </span>
+    </Panel>
   );
 }
 
@@ -174,7 +234,7 @@ function LevelUp({ events }: { events: LedgerEvent[] }) {
     <motion.div
       initial={{ scale: 0, rotate: -20 }}
       animate={{ scale: 1, rotate: -3 }}
-      transition={{ delay: 0.6, type: "spring", stiffness: 300, damping: 12 }}
+      transition={{ delay: LEVEL_UP_DELAY_S, type: "spring", stiffness: 300, damping: 12 }}
       className="pop-border flex flex-col items-center rounded-3xl bg-slate-900 py-3 text-center"
       data-testid="level-up"
     >

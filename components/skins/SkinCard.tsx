@@ -1,4 +1,10 @@
-import { levelProgress, MAX_SKIN_LEVEL, PERK_LABEL, perkPercent, skinLevel, type Rarity, type Skin } from "@/lib/skins";
+"use client";
+
+import { useState } from "react";
+import { FillBar } from "@/components/fx/FillBar";
+import { useEffectLevel } from "@/lib/fx/effects";
+import type { FillPoint } from "@/lib/fx/fill";
+import { LEVEL_COPIES, levelProgress, MAX_SKIN_LEVEL, PERK_LABEL, perkPercent, skinLevel, type Rarity, type Skin } from "@/lib/skins";
 
 export const RARITY_STYLE: Record<Rarity, string> = {
   N: "bg-slate-200 text-slate-700",
@@ -72,45 +78,75 @@ export function PerkText({ skin, level = 1 }: { skin: Skin; level?: number }) {
   );
 }
 
-/** 次のレベルまでの進み具合のバー。最大レベルなら満タンの虹色 */
-export function LevelProgress({ copies }: { copies: number }) {
-  const level = skinLevel(copies);
+/** 枚数を、バーの位置(レベルと溜まり具合)にする。最大レベルは満タン */
+function fillPoint(copies: number): FillPoint {
   const progress = levelProgress(copies);
-  const max = level >= MAX_SKIN_LEVEL;
-  const ratio = progress ? progress.have / progress.need : 1;
+  return { level: skinLevel(copies), ratio: progress ? progress.have / progress.need : 1 };
+}
+
+const skinLevelLabel = (level: number) => (level >= MAX_SKIN_LEVEL ? "Lv.MAX" : `Lv.${level}→${level + 1}`);
+
+function skinLevelCount(level: number, ratio: number): string {
+  if (level >= MAX_SKIN_LEVEL) return "MAX";
+  const need = LEVEL_COPIES[level] - LEVEL_COPIES[level - 1];
+  return `${Math.round(ratio * need)}/${need}`;
+}
+
+/**
+ * 次のレベルまでの進み具合のバー。最大レベルなら満タンの虹色。
+ * fromCopies を渡すと、その枚数から copies まで溜まっていく(ガチャの結果用)。
+ */
+export function LevelProgress({
+  copies,
+  fromCopies,
+  delay,
+  onLevelUp,
+}: {
+  copies: number;
+  fromCopies?: number;
+  delay?: number;
+  onLevelUp?: (level: number) => void;
+}) {
   return (
-    <div className="flex flex-col gap-0.5" data-testid="level-progress">
-      <div className="flex items-baseline justify-between text-[10px] font-black text-slate-500">
-        <span>{max ? "Lv.MAX" : `Lv.${level}→${level + 1}`}</span>
-        <span className="tabular-nums" data-testid="level-progress-count">
-          {progress ? `${progress.have}/${progress.need}` : "MAX"}
-        </span>
-      </div>
-      <div className="h-2.5 overflow-hidden rounded-full border-2 border-slate-900 bg-slate-100">
-        <div
-          className={`h-full rounded-full ${max ? "rainbow-bg" : "bg-emerald-400"}`}
-          style={{ width: `${Math.round(ratio * 100)}%` }}
-        />
-      </div>
-    </div>
+    <FillBar
+      start={fillPoint(fromCopies ?? copies)}
+      end={fillPoint(copies)}
+      delay={delay}
+      label={skinLevelLabel}
+      count={skinLevelCount}
+      maxLevel={MAX_SKIN_LEVEL}
+      onLevelUp={onLevelUp}
+      testId="level-progress"
+      countTestId="level-progress-count"
+    />
   );
 }
 
 /**
  * スキンのカード。copies(持っている枚数)を渡すと、レベルと次のレベルまでの進み具合も出す。
+ * fromCopies を渡すと、バーがその枚数から溜まっていき、Lv バッジもレベルアップした瞬間に変わる。
  */
 export function SkinCard({
   skin,
   locked = false,
   copies,
+  fromCopies,
+  fillDelay,
   footer,
 }: {
   skin: Skin;
   locked?: boolean;
   copies?: number;
+  fromCopies?: number;
+  fillDelay?: number;
   footer?: React.ReactNode;
 }) {
-  const level = copies === undefined ? 0 : skinLevel(copies);
+  const effect = useEffectLevel();
+  const finalLevel = copies === undefined ? 0 : skinLevel(copies);
+  const [shownLevel, setShownLevel] = useState<number | null>(() =>
+    fromCopies !== undefined && effect !== "low" ? skinLevel(fromCopies) : null,
+  );
+  const level = shownLevel ?? finalLevel;
   return (
     <div className="pop-border flex flex-col overflow-hidden rounded-2xl bg-white" data-testid={`skin-${skin.id}`}>
       <div className="relative h-20">
@@ -128,7 +164,9 @@ export function SkinCard({
         <span className="text-sm font-black leading-tight">{locked ? "???" : skin.name}</span>
         {!locked && <span className="text-[11px] leading-tight text-slate-500">{skin.description}</span>}
         {skin.perk && <PerkText skin={skin} level={locked ? 1 : Math.max(1, level)} />}
-        {!locked && skin.perk && copies !== undefined && level > 0 && <LevelProgress copies={copies} />}
+        {!locked && skin.perk && copies !== undefined && finalLevel > 0 && (
+          <LevelProgress copies={copies} fromCopies={fromCopies} delay={fillDelay} onLevelUp={setShownLevel} />
+        )}
         {footer}
       </div>
     </div>
