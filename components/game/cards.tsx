@@ -47,7 +47,7 @@ export function WordImage({ sense, size = "md" }: { sense: WordSense; size?: "md
       src={src}
       alt=""
       draggable={false}
-      className={`select-none drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)] ${IMAGE_SIZE[size]}`}
+      className={`pointer-events-none select-none drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)] [-webkit-user-drag:none] ${IMAGE_SIZE[size]}`}
     />
   );
 }

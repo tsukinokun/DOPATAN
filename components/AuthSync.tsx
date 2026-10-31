@@ -1,6 +1,7 @@
 "use client";
 
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { refreshPushSubscription } from "@/lib/push/client";
 import { useEffect } from "react";
 import { loadRemote, saveRemote } from "@/lib/storage/cloud";
 import { mergeData, type SyncedData } from "@/lib/storage/merge";
@@ -85,6 +86,8 @@ export function AuthSync() {
       const { set, userId } = useAuth.getState();
       if (userId === session.user.id) return;
       set({ status: "signedIn", userId: session.user.id, email: session.user.email ?? null, syncState: "syncing" });
+      // 通知がオンなら、この端末をアカウントと結び付ける(個別のプレゼントの通知用。失敗しても続ける)
+      void refreshPushSubscription().catch(() => {});
       try {
         const merged = mergeData(snapshot(), await loadRemote<CloudSettings>(supabase, session.user.id));
         applying = true;

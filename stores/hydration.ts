@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { getWords, loadWords, subscribeWords } from "@/lib/words";
+import { useNews } from "./news";
 import { useProgress } from "./progress";
 import { useSettings } from "./settings";
 import { useWallet } from "./wallet";
@@ -12,12 +13,14 @@ function subscribe(onChange: () => void) {
   const unsubSettings = useSettings.persist.onFinishHydration(onChange);
   const unsubProgress = useProgress.persist.onFinishHydration(onChange);
   const unsubWallet = useWallet.persist.onFinishHydration(onChange);
+  const unsubNews = useNews.persist.onFinishHydration(onChange);
   const unsubWords = subscribeWords(onChange);
   return () => {
     unsubWords();
     unsubSettings();
     unsubProgress();
     unsubWallet();
+    unsubNews();
   };
 }
 
@@ -26,6 +29,7 @@ function isHydrated() {
     useSettings.persist.hasHydrated() &&
     useProgress.persist.hasHydrated() &&
     useWallet.persist.hasHydrated() &&
+    useNews.persist.hasHydrated() &&
     getWords().length > 0
   );
 }
@@ -43,6 +47,7 @@ export function useStoresHydrated(): boolean {
       useSettings.persist.rehydrate(),
       useProgress.persist.rehydrate(),
       useWallet.persist.rehydrate(),
+      useNews.persist.rehydrate(),
       loadWords(),
     ]);
   }, []);

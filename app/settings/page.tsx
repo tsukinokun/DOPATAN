@@ -1,6 +1,7 @@
 "use client";
 
 import { Hydrated, Panel, PopButton } from "@/components/ui";
+import { PushCard } from "@/components/news/PushCard";
 import type { EffectIntensity, QuestionMode } from "@/lib/types";
 import { useProgress } from "@/stores/progress";
 import { useSettings, type Settings } from "@/stores/settings";
@@ -97,6 +98,8 @@ function SettingsView() {
           </label>
         ))}
       </Panel>
+
+      <PushCard />
 
       <Panel>
         <button type="button" onClick={reset} className="font-black text-pink-600">

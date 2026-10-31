@@ -58,6 +58,26 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 - **既存の Supabase プロジェクトの場合**:`0003_social.sql` を SQL Editor で1回実行してください。
 - **SQL のテスト**:`lib/social/sql.test.ts` が PGlite(WebAssembly の Postgres)でマイグレーションを実際に流して確かめます(`npm test` に含まれます)。
 
+## お知らせ・スマホ通知
+
+ホームの 📢 から開くお知らせ欄(`/news`)と、スマホへのポップアップ通知(Web Push)です。
+
+- **お知らせ**:今週のイベントの開始は自動で載ります。手書きのお知らせは、コードなら `lib/news/catalog.ts` に足してデプロイします。Supabase なら SQL Editor で次を実行します(デプロイ不要)。`notify` を `true` にすると、スマホにも通知します。
+  ```sql
+  insert into public.announcements (title, body, notify) values ('メンテナンスのお知らせ', '11/10 3:00〜4:00 はつながりにくくなります。', true);
+  ```
+- **通知するもの**:毎朝7時(日本時間。Vercel の定期実行 `vercel.json` → `/api/push/daily`)にまとめて送ります。1つの端末には1日1通です。
+  - 月曜:イベントの開始
+  - 日曜:イベント終了の前日
+  - `notify` のお知らせ
+  - Supabase から配ったプレゼント(個別のプレゼントは、その人がログインした端末にだけ届きます)
+- **ゲストも受け取れます**。端末ごとに `push_subscriptions` に登録し、個人を特定する情報は保存しません。iPhone では、Safari の共有ボタンから「ホーム画面に追加」した DOPATAN(iOS 16.4以上)でだけ受け取れます。
+- **使えるようにする手順**(service_role キーは使いません):
+  1. `npx web-push generate-vapid-keys` で鍵を作る。
+  2. Vercel の Environment Variables に `NEXT_PUBLIC_VAPID_PUBLIC_KEY`・`VAPID_PRIVATE_KEY`・`VAPID_SUBJECT`(`mailto:あなたのメール`)・`CRON_SECRET`・`PUSH_SECRET`(16文字以上の好きな文字列)を登録して、デプロイし直す(`.env.example` 参照)。
+  3. Supabase の SQL Editor で `supabase/migrations/0006_news_push.sql` を1回実行する。
+  4. 同じく SQL Editor で、合言葉を入れる:`insert into dopatan_private.push_config (secret) values ('<PUSH_SECRET と同じ値>');`
+
 ## 週替わりイベント
 
 すごろく → ビンゴ → ボスバトル → スタンプラリーの順に、日本時間の月曜0時で切り替わります(ホームのバナーと `/event`)。プレイが終わるとイベントの画面(`/event/progress`)で進む演出が出て、そのあと結果画面に進みます。
@@ -102,8 +122,9 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 | `lib/social/` | リーグ・フレンドの API、表示名、サーバー由来の報酬 |
 | `stores/social.ts`、`components/social/` | フレンド・リーグの状態と画面の部品 |
 | `lib/events/` | 週替わりイベントのルール(すごろく・ビンゴ・ボスバトル・スタンプラリー)と週の計算 |
+| `lib/news/`、`lib/push/` | お知らせ(イベント開始の自動のお知らせ・手書きのお知らせ)と、スマホ通知の送る中身・端末側の登録 |
 | `lib/presents/` | プレゼントボックス(受け取りの判定、コードで配るプレゼントの一覧) |
-| `supabase/migrations/` | データベースの定義(0001〜0005) |
+| `supabase/migrations/` | データベースの定義(0001〜0006) |
 | `data/words/` | 単語データ(スコア帯ごと。アプリは使うときに読み込む) |
 | `public/emoji/`、`public/illustrations/` | 単語の絵。[Fluent Emoji](https://github.com/microsoft/fluentui-emoji)(MIT)と、自分で描いた SVG(こちらが優先) |
 | `public/audio/` | 発音音声(Kokoro-82M で作成。無い単語はブラウザの読み上げを使う) |
