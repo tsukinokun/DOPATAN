@@ -25,6 +25,9 @@ export function FillBar({
   label,
   count,
   maxLevel,
+  barClassName = "bg-emerald-400",
+  drain = false,
+  levelUpText = "LEVEL UP!",
   onLevelUp,
   size = "sm",
   testId,
@@ -41,6 +44,12 @@ export function FillBar({
   count?: (level: number, ratio: number) => React.ReactNode;
   /** このレベル以上は満タンの虹色にする */
   maxLevel?: number;
+  /** バーの中身の色 */
+  barClassName?: string;
+  /** true なら残りを表示する(減っていくバー。ボスの HP 用) */
+  drain?: boolean;
+  /** レベルをまたいだときに出す文字 */
+  levelUpText?: string;
   onLevelUp?: (level: number) => void;
   size?: "sm" | "lg";
   testId?: string;
@@ -56,7 +65,7 @@ export function FillBar({
   // 値が変わらないときも、表示したときに 0 から伸ばす(数字は最初から最後の値を出す)
   const [growIn] = useState(() => !animated && effect !== "low" && last.to > 0);
   const width = useMotionValue(growIn ? 0 : shown.ratio);
-  const widthPercent = useTransform(width, (v) => `${v * 100}%`);
+  const widthPercent = useTransform(width, (v) => `${(drain ? 1 - v : v) * 100}%`);
   const onLevelUpRef = useRef(onLevelUp);
   useEffect(() => {
     onLevelUpRef.current = onLevelUp;
@@ -120,7 +129,7 @@ export function FillBar({
         animate={{ boxShadow: "0 0 0 0px #fde04700, 0 0 0px 0px #facc1500" }}
         transition={{ duration: 0.7 }}
       >
-        <motion.div className={`h-full rounded-full ${max ? "rainbow-bg" : "bg-emerald-400"}`} style={{ width: widthPercent }} />
+        <motion.div className={`h-full rounded-full ${max ? "rainbow-bg" : barClassName}`} style={{ width: widthPercent }} />
       </motion.div>
       <AnimatePresence>
         {levelUps > 0 && (
@@ -132,7 +141,7 @@ export function FillBar({
             transition={{ duration: 1.1, times: [0, 0.3, 1] }}
             data-testid="fill-level-up"
           >
-            LEVEL UP!
+            {levelUpText}
           </motion.span>
         )}
       </AnimatePresence>

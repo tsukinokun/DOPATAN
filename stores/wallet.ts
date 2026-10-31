@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { canAfford, GACHAS, rollGacha, type GachaKind, type GachaResult } from "@/lib/economy/gacha";
-import { balance, ownedSkins, skinCopies, totalFevers, type Ledger, type LedgerEvent } from "@/lib/economy/ledger";
+import { TICKET_LABEL, ticketFits } from "@/lib/economy/tickets";
+import { balance, ownedSkins, skinCopies, ticketBalance, totalFevers, type TicketKind, type Ledger, type LedgerEvent } from "@/lib/economy/ledger";
 import {
   addSessionToDaily,
   currentStreak,
@@ -41,6 +42,8 @@ type WalletStore = WalletData & {
   equip: (category: SkinCategory, id: string) => void;
   /** サーバーで決まった報酬(リーグ・招待・応援)を台帳に入れる。入れたばかりのものを返す */
   grantServerRewards: (events: LedgerEvent[]) => LedgerEvent[];
+  /** スキルチケットを1枚使って、持っているスキンを1枚増やす。使えなければ false */
+  spendTicket: (kind: TicketKind, skinId: string, now?: number) => boolean;
   /** プレゼントを受け取って台帳に入れる。受け取ったばかりのイベントを返す(受け取り済みは飛ばす) */
   receivePresents: (presents: Present[], now?: number) => LedgerEvent[];
 };
@@ -136,6 +139,14 @@ export const useWallet = create<WalletStore>()(
           coins,
           fevers: summary.feverCount,
           xp,
+          stats: {
+            score: summary.score ?? 0,
+            correct: summary.correct,
+            wrong: summary.wrong,
+            maxCombo: summary.maxCombo,
+            fevers: summary.feverCount,
+            newWords: summary.newWords,
+          },
           ...(coins > baseCoins && { bonusCoins: coins - baseCoins }),
           ...(xp > baseXp && { bonusXp: xp - baseXp }),
         };
@@ -181,6 +192,22 @@ export const useWallet = create<WalletStore>()(
         const fresh = events.filter((e) => !state.ledger[e.id]);
         if (fresh.length > 0) set({ ledger: withEvents(state.ledger, fresh) });
         return fresh;
+      },
+
+      spendTicket: (kind, skinId, now = Date.now()) => {
+        const state = get();
+        const skin = getSkin(skinId);
+        if (!skin || !ownedSkins(state.ledger).has(skinId) || !ticketFits(kind, skin)) return false;
+        if (ticketBalance(state.ledger)[kind] <= 0) return false;
+        const event: LedgerEvent = {
+          id: `ticket:${newId()}`,
+          at: now,
+          label: `${TICKET_LABEL[kind]}:${skin.name}`,
+          tickets: { [kind]: -1 },
+          skin: skinId,
+        };
+        set({ ledger: withEvents(state.ledger, [event]) });
+        return true;
       },
 
       receivePresents: (presents, now = Date.now()) =>

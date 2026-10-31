@@ -16,12 +16,40 @@ export type LedgerEvent = {
   fevers?: number;
   /** プレイ報酬のときの XP(レベルの計算に使う) */
   xp?: number;
+  /** プレイ報酬のときの1回分の成績(イベントの進み具合の計算に使う) */
+  stats?: PlayStats;
+  /** スキルチケットの増減 */
+  tickets?: Tickets;
   /** プレイ報酬のうち、スキン効果で増えた分(表示用) */
   bonusCoins?: number;
   bonusXp?: number;
 };
 
 export type Ledger = Record<string, LedgerEvent>;
+
+/** 1回のプレイの成績 */
+export type PlayStats = {
+  score: number;
+  correct: number;
+  wrong: number;
+  maxCombo: number;
+  fevers: number;
+  newWords: number;
+};
+
+/** スキルチケットの種類。レア度別(同じレア度のスキンに使える)と万能(ANY) */
+export type TicketKind = "N" | "R" | "SR" | "SSR" | "ANY";
+export type Tickets = Partial<Record<TicketKind, number>>;
+export const TICKET_KINDS: TicketKind[] = ["N", "R", "SR", "SSR", "ANY"];
+
+export function ticketBalance(ledger: Ledger): Record<TicketKind, number> {
+  const total: Record<TicketKind, number> = { N: 0, R: 0, SR: 0, SSR: 0, ANY: 0 };
+  for (const e of Object.values(ledger)) {
+    if (!e.tickets) continue;
+    for (const k of TICKET_KINDS) total[k] += e.tickets[k] ?? 0;
+  }
+  return total;
+}
 
 export function balance(ledger: Ledger): { coins: number; gems: number } {
   let coins = 0;

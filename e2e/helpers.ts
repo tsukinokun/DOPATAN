@@ -52,3 +52,11 @@ export async function openHome(page: Page) {
   await receive.click({ timeout: 5000 }).catch(() => {});
   await expect(page.getByTestId("login-bonus")).toHaveCount(0);
 }
+
+/** プレイが終わるとイベントの画面が出るので、進む演出を確かめてから結果画面へ進む */
+export async function passEventProgress(page: Page) {
+  await expect(page).toHaveURL(/\/event\/progress$/, { timeout: 10_000 });
+  await expect(page.getByTestId("event-progress")).toBeVisible();
+  await page.getByTestId("event-next").click();
+  await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
+}

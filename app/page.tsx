@@ -10,6 +10,7 @@ import { filterScope, getWords } from "@/lib/words";
 import { CurrencyBar } from "@/components/economy/CurrencyBar";
 import { DailyMissions } from "@/components/economy/DailyMissions";
 import { LoginBonus } from "@/components/economy/LoginBonus";
+import { EventBanner } from "@/components/events/EventBanner";
 import { usePendingPresents } from "@/components/presents/usePresents";
 import { LevelBar, SocialNotices } from "@/components/social/common";
 import { Chip, Hydrated, Panel, PopButton } from "@/components/ui";
@@ -81,7 +82,10 @@ function Home() {
           ▶ PLAY
         </PopButton>
       </motion.div>
+
       <p className="-mt-3 text-center text-sm font-black text-white">1回90秒・スワイプで答えよう</p>
+
+      <EventBanner />
 
       <div className="grid grid-cols-2 gap-3">
         <PopButton href="/gacha" color="pink" className="whitespace-nowrap px-2 py-4 text-lg sm:text-xl" testId="open-gacha">

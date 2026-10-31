@@ -1,4 +1,4 @@
-import { seededRng, shuffle } from "@/lib/random";
+import { hashString, seededRng, shuffle } from "@/lib/random";
 import type { Ledger, LedgerEvent } from "./ledger";
 
 /** 1日分の集計。端末をまたいでマージするときは項目ごとに大きい方をとる */
@@ -10,9 +10,19 @@ export type DailyStats = {
   fevers: number;
   /** その日の1回のプレイでの最高正解率(%) */
   bestAccuracy: number;
+  /** その日の1回のプレイでの最高スコア */
+  bestScore: number;
 };
 
-export const EMPTY_DAILY: DailyStats = { sessions: 0, correct: 0, maxCombo: 0, newWords: 0, fevers: 0, bestAccuracy: 0 };
+export const EMPTY_DAILY: DailyStats = {
+  sessions: 0,
+  correct: 0,
+  maxCombo: 0,
+  newWords: 0,
+  fevers: 0,
+  bestAccuracy: 0,
+  bestScore: 0,
+};
 
 export type SessionSummary = {
   correct: number;
@@ -20,6 +30,8 @@ export type SessionSummary = {
   maxCombo: number;
   feverCount: number;
   newWords: number;
+  /** そのプレイのスコア(イベントとミッションの判定に使う) */
+  score?: number;
 };
 
 /** 端末の時刻での日付(YYYY-MM-DD) */
@@ -82,6 +94,7 @@ export function addSessionToDaily(d: DailyStats, s: SessionSummary): DailyStats 
     newWords: d.newWords + s.newWords,
     fevers: d.fevers + s.feverCount,
     bestAccuracy: Math.max(d.bestAccuracy, total === 0 ? 0 : Math.round((s.correct / total) * 100)),
+    bestScore: Math.max(d.bestScore ?? 0, s.score ?? 0),
   };
 }
 
@@ -104,7 +117,7 @@ export function mergeDaily(a: Record<string, DailyStats>, b: Record<string, Dail
     const o = merged[date];
     merged[date] = o
       ? (Object.fromEntries(
-          (Object.keys(EMPTY_DAILY) as (keyof DailyStats)[]).map((k) => [k, Math.max(d[k], o[k])]),
+          (Object.keys(EMPTY_DAILY) as (keyof DailyStats)[]).map((k) => [k, Math.max(d[k] ?? 0, o[k] ?? 0)]),
         ) as DailyStats)
       : d;
   }
@@ -119,7 +132,8 @@ export const MISSIONS: readonly MissionDef[] = [
   { id: "play2", label: "今日2回遊ぶ", target: 2, value: (d) => d.sessions },
   { id: "correct40", label: "正解を40回する", target: 40, value: (d) => d.correct },
   { id: "combo20", label: "20コンボを出す", target: 20, value: (d) => d.maxCombo },
-  { id: "new5", label: "新しい単語を5語覚える", target: 5, value: (d) => d.newWords },
+  // 「新しい単語を覚える」は、全部覚えた人や出題範囲を狭くした人が達成できなくなるので使わない
+  { id: "score10k", label: "1回でスコア10,000以上を出す", target: 10000, value: (d) => d.bestScore ?? 0 },
   { id: "fever2", label: "フィーバーを2回出す", target: 2, value: (d) => d.fevers },
   { id: "acc90", label: "正解率90%以上で1回遊ぶ", target: 90, value: (d) => d.bestAccuracy },
 ];
@@ -127,15 +141,10 @@ export const MISSIONS: readonly MissionDef[] = [
 export const MISSION_GEMS = 10;
 export const ALL_CLEAR_GEMS = 15;
 
-function hash(text: string): number {
-  let h = 2166136261;
-  for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  return h >>> 0;
-}
 
 /** その日のミッション3つ。日付から決まるので、どの端末でも同じになる */
 export function missionsFor(date: string): MissionDef[] {
-  return shuffle(MISSIONS, seededRng(hash(date))).slice(0, 3);
+  return shuffle(MISSIONS, seededRng(hashString(date))).slice(0, 3);
 }
 
 export const missionEventId = (date: string, id: string) => `mission:${date}:${id}`;

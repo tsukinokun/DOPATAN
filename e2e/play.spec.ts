@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openHome, useModes } from "./helpers";
+import { openHome, useModes, passEventProgress } from "./helpers";
 
 // つづり並べ替えはドラッグしないので、ここでは除く(e2e/modes.spec.ts で確かめる)
 test.beforeEach(async ({ page }) => {
@@ -91,7 +91,7 @@ test("the session ends after 90 seconds and shows the result", async ({ page }) 
   await dragTo(page, "drop-correct");
   await page.waitForTimeout(800);
   await page.clock.fastForward("01:31");
-  await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
+  await passEventProgress(page);
   await expect(page.getByTestId("result-words").locator("li")).not.toHaveCount(0);
 });
 

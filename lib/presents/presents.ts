@@ -1,13 +1,14 @@
-import type { Ledger, LedgerEvent } from "@/lib/economy/ledger";
+import { TICKET_KINDS, type Ledger, type LedgerEvent, type Tickets } from "@/lib/economy/ledger";
 import { getSkin } from "@/lib/skins";
 
 /**
  * プレゼントボックスに届くもの。
- * app はコード(catalog.ts)に書いたもの、server は Supabase の presents テーブルから届いたもの。
+ * app はコード(catalog.ts)に書いたもの、server は Supabase の presents テーブルから届いたもの、
+ * event は週替わりイベントの報酬(進み具合から作る)。
  */
 export type Present = {
   id: string;
-  source: "app" | "server";
+  source: "app" | "server" | "event";
   title: string;
   message?: string;
   coins?: number;
@@ -15,6 +16,8 @@ export type Present = {
   xp?: number;
   /** スキンの ID。持っていればかぶり扱いでレベルが上がる */
   skin?: string;
+  /** スキルチケット */
+  tickets?: Tickets;
   /** 受け取れるようになる時刻(ミリ秒)。無ければすぐ */
   startsAt?: number;
   /** 受け取り期限(ミリ秒)。null か無ければ期限なし */
@@ -47,8 +50,11 @@ export function presentEvent(p: Present, now: number): LedgerEvent {
     ...(p.gems ? { gems: p.gems } : {}),
     ...(p.xp ? { xp: p.xp } : {}),
     ...(skin ? { skin } : {}),
+    ...(hasTickets(p.tickets) ? { tickets: p.tickets } : {}),
   };
 }
+
+const hasTickets = (t: Tickets | undefined): t is Tickets => Boolean(t && TICKET_KINDS.some((k) => (t[k] ?? 0) > 0));
 
 /** 受け取ったプレゼントの履歴(新しい順) */
 export function receivedPresents(ledger: Ledger): LedgerEvent[] {

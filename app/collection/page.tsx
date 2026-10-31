@@ -1,13 +1,27 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Achievements } from "@/components/economy/Achievements";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
-import { skinCopies } from "@/lib/economy/ledger";
+import { skinCopies, TICKET_KINDS, ticketBalance, type TicketKind } from "@/lib/economy/ledger";
+import { TICKET_LABEL, usableTickets } from "@/lib/economy/tickets";
 import { equippedPerks } from "@/lib/economy/perks";
 import { setSoundSkin, sfx, unlockAudio } from "@/lib/fx/audio";
-import { CATEGORY_LABEL, PERK_KINDS, PERK_LABEL, SKINS, skinOf, type SkinCategory, type SoundLook } from "@/lib/skins";
+import {
+  CATEGORY_LABEL,
+  MAX_SKIN_LEVEL,
+  PERK_KINDS,
+  PERK_LABEL,
+  SKINS,
+  skinLevel,
+  skinOf,
+  type Skin,
+  type SkinCategory,
+  type SoundLook,
+} from "@/lib/skins";
+import { useSettings } from "@/stores/settings";
 import { useWallet } from "@/stores/wallet";
 
 export default function CollectionPage() {
@@ -71,6 +85,10 @@ function Skins() {
   const copies = skinCopies(ledger);
   const current = skinOf(category, equipped[category]);
   const perks = equippedPerks(equipped, copies);
+  const tickets = ticketBalance(ledger);
+  const [ticketFor, setTicketFor] = useState<Skin | null>(null);
+  /** チケットを使った直後のスキン(そのカードのバーが溜まる演出をする) */
+  const [boost, setBoost] = useState<{ id: string; from: number; key: number } | null>(null);
 
   return (
     <>
@@ -89,6 +107,20 @@ function Skins() {
         <p className="text-[11px] text-slate-500">
           かぶるとスキンのレベルが上がり、効果が強くなります。装備している3つの効果が合計されます。
         </p>
+      </Panel>
+      <Panel className="flex flex-col gap-1.5 py-3" testId="tickets">
+        <h2 className="text-sm font-black">🎫 スキルチケット</h2>
+        {TICKET_KINDS.some((k) => tickets[k] > 0) ? (
+          <div className="flex flex-wrap gap-1.5">
+            {TICKET_KINDS.filter((k) => tickets[k] > 0).map((k) => (
+              <span key={k} className="rounded-lg border-2 border-slate-900 bg-yellow-50 px-2 text-xs font-black" data-testid={`ticket-${k}`}>
+                {TICKET_LABEL[k]} ×{tickets[k]}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-500">イベントの報酬でもらえます。持っているスキンのかぶりを1枚増やせます。</p>
+        )}
       </Panel>
       <div className="grid grid-cols-3 gap-2">
         {CATEGORIES.map((c) => {
@@ -119,14 +151,21 @@ function Skins() {
           {SKINS.filter((s) => s.category === category).map((skin) => {
             const have = copies.has(skin.id);
             const isEquipped = current.id === skin.id;
+            const canTicket =
+              have && skinLevel(copies.get(skin.id) ?? 0) < MAX_SKIN_LEVEL && usableTickets(tickets, skin).length > 0;
+            const boosted = boost?.id === skin.id ? boost : null;
             return (
               <SkinCard
-                key={skin.id}
+                key={boosted ? `${skin.id}-${boosted.key}` : skin.id}
                 skin={skin}
                 locked={!have}
                 copies={copies.get(skin.id)}
+                fromCopies={boosted?.from}
+                fillDelay={0.2}
                 footer={
-                  have && (
+                  !have ? (
+                    skin.limited && <span className="text-[11px] font-black text-amber-600">🏆 イベント限定</span>
+                  ) : (
                     <div className="mt-auto flex gap-1">
                       <button
                         type="button"
@@ -150,6 +189,17 @@ function Skins() {
                           ▶
                         </button>
                       )}
+                      {canTicket && (
+                        <button
+                          type="button"
+                          aria-label={`${skin.name} にチケットを使う`}
+                          onClick={() => setTicketFor(skin)}
+                          data-testid={`ticket-open-${skin.id}`}
+                          className="rounded-lg border-2 border-slate-900 bg-sky-200 px-1.5 text-xs"
+                        >
+                          🎫
+                        </button>
+                      )}
                     </div>
                   )
                 }
@@ -158,6 +208,77 @@ function Skins() {
           })}
         </div>
       </Panel>
+      <AnimatePresence>
+        {ticketFor && (
+          <TicketDialog
+            skin={ticketFor}
+            tickets={tickets}
+            onClose={() => setTicketFor(null)}
+            onUse={(kind) => {
+              const from = copies.get(ticketFor.id) ?? 0;
+              if (useWallet.getState().spendTicket(kind, ticketFor.id)) {
+                if (useSettings.getState().sound) sfx.coin();
+                setBoost((b) => ({ id: ticketFor.id, from, key: (b?.key ?? 0) + 1 }));
+              }
+              setTicketFor(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
+  );
+}
+
+/** どのチケットを使うか選ぶ。万能チケットはもう一度押して確定する */
+function TicketDialog({
+  skin,
+  tickets,
+  onUse,
+  onClose,
+}: {
+  skin: Skin;
+  tickets: Record<TicketKind, number>;
+  onUse: (kind: TicketKind) => void;
+  onClose: () => void;
+}) {
+  const [confirmAny, setConfirmAny] = useState(false);
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      data-testid="ticket-dialog"
+    >
+      <motion.div
+        className="pop-border flex w-full max-w-xs flex-col gap-3 rounded-3xl bg-white p-5"
+        initial={{ scale: 0.5 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.6, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 16 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="text-center font-black">🎫 「{skin.name}」に使う</span>
+        <span className="text-center text-xs text-slate-500">かぶりが1枚増えて、レベルに近づきます</span>
+        {usableTickets(tickets, skin).map((k) => {
+          const isAny = k === "ANY";
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => (isAny && !confirmAny ? setConfirmAny(true) : onUse(k))}
+              data-testid={`ticket-use-${k}`}
+              className={`pop-border rounded-2xl py-2 font-black ${isAny ? (confirmAny ? "bg-pink-400 text-white" : "bg-violet-200") : "bg-yellow-300"}`}
+            >
+              {isAny && confirmAny ? "本当に万能チケットを使う" : `${TICKET_LABEL[k]}を使う(残り${tickets[k]})`}
+            </button>
+          );
+        })}
+        <button type="button" onClick={onClose} className="text-sm font-black text-slate-500">
+          やめる
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
