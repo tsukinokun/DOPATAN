@@ -31,6 +31,16 @@ export function eventNews(now: number): News {
   };
 }
 
+/**
+ * アプリ内のパスだけを通す(外部のサイトや javascript: などは null)。
+ * お知らせのリンクと通知を押したときの移動先に使う。
+ */
+export function safeInternalPath(link: string | null | undefined): string | null {
+  if (!link || !link.startsWith("/") || link.startsWith("//") || link.startsWith("/\\")) return null;
+  if (/[\s\\]/.test(link) || link.length > 200) return null;
+  return link;
+}
+
 /** 公開中のお知らせを新しい順に並べる。同じ ID は1つにする */
 export function mergeNews(lists: readonly (readonly News[])[], now: number): News[] {
   const byId = new Map<string, News>();

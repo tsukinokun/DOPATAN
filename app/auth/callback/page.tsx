@@ -6,6 +6,7 @@ import { PopButton } from "@/components/ui";
 import { useAuth } from "@/stores/auth";
 
 const TIMEOUT_MS = 10_000;
+const FAILED_MESSAGE = "ログインを完了できませんでした。もう一度お試しください。";
 
 /**
  * Google やメール確認のリンクから戻ってくるページ。
@@ -22,11 +23,10 @@ export default function AuthCallbackPage() {
       return;
     }
     const params = new URLSearchParams(window.location.search + window.location.hash.replace(/^#/, "&"));
-    const error = params.get("error_description");
-    const timer = setTimeout(
-      () => setFailed(error ?? "ログインを完了できませんでした。もう一度お試しください。"),
-      error ? 0 : TIMEOUT_MS,
-    );
+    // URL の文字は画面に出さない(細工したリンクで偽のメッセージを出せてしまうため)。調べるときのためにログにだけ残す
+    const error = params.get("error_description") ?? params.get("error");
+    if (error) console.warn("auth callback error:", error);
+    const timer = setTimeout(() => setFailed(FAILED_MESSAGE), error ? 0 : TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [router, status]);
 

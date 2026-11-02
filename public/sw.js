@@ -23,10 +23,15 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// 通知を押したら、開いている画面を前に出して移動する(無ければ開く)
+// 通知を押したら、開いている画面を前に出して移動する(無ければ開く)。移動先はこのアプリの中だけ
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  let target = new URL("/", self.location.origin);
+  try {
+    const parsed = new URL(event.notification.data?.url || "/", self.location.origin);
+    if (parsed.origin === self.location.origin) target = parsed;
+  } catch {}
+  const url = target.href;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {

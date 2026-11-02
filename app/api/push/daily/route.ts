@@ -2,6 +2,20 @@ import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 import { dailyPushes, type PushBatch } from "@/lib/push/daily";
 
+/** 1回の実行で送る最大数、同時に送る数、1件の待ち時間の上限 */
+const MAX_PUSHES = 5000;
+const CONCURRENCY = 20;
+const SEND_TIMEOUT_MS = 10_000;
+
+/** size 件ずつ順番に送る(一度に大量のリクエストを出さない) */
+async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  for (let i = 0; i < items.length; i += size) {
+    results.push(...(await Promise.allSettled(items.slice(i, i + size).map(run))));
+  }
+  return results;
+}
+
 /**
  * 毎朝7時(日本時間)に Vercel の定期実行から呼ばれ、スマホに通知を送る(vercel.json)。
  * 送り先は Supabase の push_batch から、合言葉(PUSH_SECRET)を使って読む。service_role キーは使わない。
@@ -28,14 +42,12 @@ export async function GET(request: Request) {
   if (!data) return Response.json({ error: "push secret rejected" }, { status: 403 });
 
   webpush.setVapidDetails(subject, publicKey, privateKey);
-  const pushes = dailyPushes(Date.now(), data as PushBatch);
-  const results = await Promise.allSettled(
-    pushes.map(({ subscription, message }) =>
-      webpush.sendNotification(
-        { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
-        JSON.stringify(message),
-        { TTL: 12 * 60 * 60 },
-      ),
+  const pushes = dailyPushes(Date.now(), data as PushBatch).slice(0, MAX_PUSHES);
+  const results = await inBatches(pushes, CONCURRENCY, ({ subscription, message }) =>
+    webpush.sendNotification(
+      { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
+      JSON.stringify(message),
+      { TTL: 12 * 60 * 60, timeout: SEND_TIMEOUT_MS },
     ),
   );
   // もう使われていない送り先は消す

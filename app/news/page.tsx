@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { PushCard } from "@/components/news/PushCard";
 import { useNewsList } from "@/components/news/useNewsList";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
-import type { News } from "@/lib/news/news";
+import { safeInternalPath, type News } from "@/lib/news/news";
 import { useNews } from "@/stores/news";
 
 export default function NewsPage() {
@@ -84,8 +84,8 @@ function NewsCard({ news: n, unread }: { news: News; unread: boolean }) {
         ) : (
           <span />
         )}
-        {n.link && (
-          <PopButton href={n.link} color="yellow" className="px-3 py-1 text-sm">
+        {safeInternalPath(n.link) && (
+          <PopButton href={safeInternalPath(n.link)!} color="yellow" className="px-3 py-1 text-sm">
             {n.link === "/event" ? "イベントを見る ▶" : "ひらく ▶"}
           </PopButton>
         )}

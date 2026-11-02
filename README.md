@@ -75,7 +75,7 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 - **使えるようにする手順**(service_role キーは使いません):
   1. `npx web-push generate-vapid-keys` で鍵を作る。
   2. Vercel の Environment Variables に `NEXT_PUBLIC_VAPID_PUBLIC_KEY`・`VAPID_PRIVATE_KEY`・`VAPID_SUBJECT`(`mailto:あなたのメール`)・`CRON_SECRET`・`PUSH_SECRET`(16文字以上の好きな文字列)を登録して、デプロイし直す(`.env.example` 参照)。
-  3. Supabase の SQL Editor で `supabase/migrations/0006_news_push.sql` を1回実行する。
+  3. Supabase の SQL Editor で `supabase/migrations/0006_news_push.sql` と `0007_security.sql` を1回ずつ(この順で)実行する。
   4. 同じく SQL Editor で、合言葉を入れる:`insert into dopatan_private.push_config (secret) values ('<PUSH_SECRET と同じ値>');`
 
 ## 週替わりイベント
@@ -104,6 +104,14 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
   Table Editor で `presents` テーブルに行を足しても同じです(`user_id` が空なら全員向け)。
 - **既存の Supabase プロジェクトの場合**:`supabase/migrations/0005_presents.sql` を SQL Editor で1回実行してください。実行するまでは、コードで配るプレゼントだけが届きます。
 
+## セキュリティ
+
+- データベースは全テーブルで RLS を有効にし、書き込みは関数(`security definer` + `search_path = ''`)だけで行います。テーブルを直接読めるのは自分の行だけです(`0007_security.sql`)。
+- 通知の送り先は、実在するプッシュサービス(FCM / Mozilla / Apple / Windows)の URL だけを登録できます。送信用の関数は合言葉で守ります。
+- お知らせや通知のリンクは、アプリ内のパス(`/` で始まるもの)だけを使います。
+- 全ページに `X-Frame-Options: DENY` などのセキュリティ用ヘッダーを付けます(`next.config.ts`)。
+- コイン・ジェム・スキンなどは端末側で計算しています。保存データを書き換えると自分の分は増やせますが、ほかの人のデータには触れません。週間リーグの XP はサーバーで制限しています。
+
 ## 構成
 
 | 場所 | 中身 |
@@ -124,7 +132,7 @@ node scripts/build-images.mjs    # 単語の絵(Fluent Emoji)を public/emoji �
 | `lib/events/` | 週替わりイベントのルール(すごろく・ビンゴ・ボスバトル・スタンプラリー)と週の計算 |
 | `lib/news/`、`lib/push/` | お知らせ(イベント開始の自動のお知らせ・手書きのお知らせ)と、スマホ通知の送る中身・端末側の登録 |
 | `lib/presents/` | プレゼントボックス(受け取りの判定、コードで配るプレゼントの一覧) |
-| `supabase/migrations/` | データベースの定義(0001〜0006) |
+| `supabase/migrations/` | データベースの定義(0001〜0007) |
 | `data/words/` | 単語データ(スコア帯ごと。アプリは使うときに読み込む) |
 | `public/emoji/`、`public/illustrations/` | 単語の絵。[Fluent Emoji](https://github.com/microsoft/fluentui-emoji)(MIT)と、自分で描いた SVG(こちらが優先) |
 | `public/audio/` | 発音音声(Kokoro-82M で作成。無い単語はブラウザの読み上げを使う) |

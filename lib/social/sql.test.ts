@@ -68,6 +68,7 @@ beforeAll(async () => {
   await db.exec(migration("0004_short_sessions.sql"));
   await db.exec(migration("0005_presents.sql"));
   await db.exec(migration("0006_news_push.sql"));
+  await db.exec(migration("0007_security.sql"));
   // Supabase の「Automatically expose new tables」がオンの状態を再現する(RLS だけで守れているかを見る)
   await db.exec(`grant usage on schema public to authenticated; grant all on all tables in schema public to authenticated;`);
 }, 60_000);
@@ -82,6 +83,7 @@ describe("migration", () => {
     await db.exec(migration("0004_short_sessions.sql"));
     await db.exec(migration("0005_presents.sql"));
     await db.exec(migration("0006_news_push.sql"));
+    await db.exec(migration("0007_security.sql"));
   });
 });
 
@@ -361,23 +363,26 @@ describe("news and push", () => {
     }
   }
   const SECRET = "test-push-secret-123456";
+  // 本物と同じ形の鍵(base64url)
+  const P256 = `B${"A".repeat(86)}`;
+  const AUTH = "A".repeat(22);
 
   it("lets guests and members save subscriptions, linking members to their account", async () => {
     const u = await addUser();
-    await asAnon(`select public.save_push_subscription('https://push.example/guest', 'k1', 'a1')`);
-    await as(u, `select public.save_push_subscription('https://push.example/member', 'k2', 'a2')`);
+    await asAnon(`select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/guest', '${P256}', '${AUTH}')`);
+    await as(u, `select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/member', '${P256}', '${AUTH}')`);
     // ゲストで登録した端末に、あとからログインした
-    await as(u, `select public.save_push_subscription('https://push.example/guest', 'k1', 'a1')`);
+    await as(u, `select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/guest', '${P256}', '${AUTH}')`);
     const rows = await db.query<{ endpoint: string; user_id: string | null }>(
-      `select endpoint, user_id from public.push_subscriptions where endpoint like 'https://push.example/%' order by endpoint`,
+      `select endpoint, user_id from public.push_subscriptions where endpoint like 'https://fcm.googleapis.com/fcm/send/%' order by endpoint`,
     );
     expect(rows.rows).toEqual([
-      { endpoint: "https://push.example/guest", user_id: u },
-      { endpoint: "https://push.example/member", user_id: u },
+      { endpoint: "https://fcm.googleapis.com/fcm/send/guest", user_id: u },
+      { endpoint: "https://fcm.googleapis.com/fcm/send/member", user_id: u },
     ]);
-    await expect(asAnon(`select public.save_push_subscription('javascript:alert(1)', 'k', 'a')`)).rejects.toThrow(/invalid_endpoint/);
-    await asAnon(`select public.delete_push_subscription('https://push.example/member')`);
-    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://push.example/member'`)).rows).toEqual([]);
+    await expect(asAnon(`select public.save_push_subscription('javascript:alert(1)', '${P256}', '${AUTH}')`)).rejects.toThrow(/invalid_endpoint/);
+    await asAnon(`select public.delete_push_subscription('https://fcm.googleapis.com/fcm/send/member')`);
+    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/member'`)).rows).toEqual([]);
   });
 
   it("keeps subscriptions and announcements out of direct reach", async () => {
@@ -402,14 +407,14 @@ describe("news and push", () => {
     await db.query(`insert into dopatan_private.push_config (secret) values ($1) on conflict do nothing`, [SECRET]);
     await db.query(`insert into public.announcements (title, body, notify, starts_at) values ('通知する', '本文', true, '2026-10-19T00:00:00+09:00')`);
     await db.query(`select dopatan_private.send_present(null, '全員にプレゼント', null, 0, 10, 0, null, null)`);
-    await asAnon(`select public.save_push_subscription('https://push.example/batch', 'k', 'a')`);
+    await asAnon(`select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/batch', '${P256}', '${AUTH}')`);
 
     expect((await asAnon<{ r: unknown }>(`select public.push_batch('wrong-secret-wrong') as r`))[0].r).toBeNull();
     expect((await asAnon<{ r: unknown }>(`select public.push_batch(null) as r`))[0].r).toBeNull();
 
     type Batch = { subscriptions: { endpoint: string }[]; announcements: { title: string }[]; presents: { title: string }[] };
     const first = (await asAnon<{ r: Batch }>(`select public.push_batch($1) as r`, [SECRET]))[0].r;
-    expect(first.subscriptions.map((s) => s.endpoint)).toContain("https://push.example/batch");
+    expect(first.subscriptions.map((s) => s.endpoint)).toContain("https://fcm.googleapis.com/fcm/send/batch");
     expect(first.announcements.map((a) => a.title)).toContain("通知する");
     expect(first.presents.map((p) => p.title)).toContain("全員にプレゼント");
 
@@ -417,9 +422,61 @@ describe("news and push", () => {
     expect(second.announcements).toEqual([]);
     expect(second.presents).toEqual([]);
 
-    await asAnon(`select public.push_remove('nope-nope-nope-nope', array['https://push.example/batch'])`);
-    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://push.example/batch'`)).rows).toHaveLength(1);
-    await asAnon(`select public.push_remove($1, array['https://push.example/batch'])`, [SECRET]);
-    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://push.example/batch'`)).rows).toEqual([]);
+    await asAnon(`select public.push_remove('nope-nope-nope-nope', array['https://fcm.googleapis.com/fcm/send/batch'])`);
+    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/batch'`)).rows).toHaveLength(1);
+    await asAnon(`select public.push_remove($1, array['https://fcm.googleapis.com/fcm/send/batch'])`, [SECRET]);
+    expect((await db.query(`select 1 from public.push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/batch'`)).rows).toEqual([]);
+  });
+});
+
+describe("security fixes (0007)", () => {
+  const P256 = `B${"A".repeat(86)}`;
+  const AUTH = "A".repeat(22);
+  async function save(endpoint: string, p256 = P256, auth = AUTH) {
+    await db.exec(`set role anon`);
+    try {
+      await db.query(`select public.save_push_subscription($1, $2, $3)`, [endpoint, p256, auth]);
+    } finally {
+      await db.exec(`reset role`);
+    }
+  }
+
+  it("only accepts real push services as endpoints", async () => {
+    for (const ok of [
+      "https://fcm.googleapis.com/fcm/send/abc",
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/abc",
+      "https://api.push.apple.com/abc",
+      "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    ]) {
+      await save(ok);
+    }
+    for (const bad of [
+      "https://evil.example.com/collect",
+      "https://fcm.googleapis.com.evil.com/x",
+      "http://fcm.googleapis.com/fcm/send/abc",
+      "https://evilpush.apple.com.attacker.net/",
+      "javascript:alert(1)",
+    ]) {
+      await expect(save(bad)).rejects.toThrow(/invalid_endpoint/);
+    }
+  });
+
+  it("rejects malformed keys", async () => {
+    await expect(save("https://fcm.googleapis.com/fcm/send/k1", "short", AUTH)).rejects.toThrow(/invalid_keys/);
+    await expect(save("https://fcm.googleapis.com/fcm/send/k2", P256, "bad key!")).rejects.toThrow(/invalid_keys/);
+  });
+
+  it("does not let users read other people's profile rows directly, while the social features still work", async () => {
+    const a = await addUser();
+    const b = await addUser();
+    const codeA = (await rpc<{ friendCode: string }>(a, "my_profile")).friendCode;
+    const codeB = (await rpc<{ friendCode: string }>(b, "my_profile")).friendCode;
+    const rows = await as<{ id: string }>(a, `select id, invited_by, last_xp_at from public.profiles`);
+    expect(rows.map((r) => r.id)).toEqual([a]);
+    // フレンドのコードで相手を探す機能は、関数経由なので今まで通り使える
+    const found = await rpc<{ friendCode: string } | null>(a, "get_profile", [codeB]);
+    expect(found?.friendCode).toBe(codeB);
+    expect(codeA).not.toBe(codeB);
   });
 });

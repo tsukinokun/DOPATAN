@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { APP_NEWS } from "@/lib/news/catalog";
-import { eventNews, mergeNews, unreadCount, type News } from "@/lib/news/news";
+import { eventNews, mergeNews, safeInternalPath, unreadCount, type News } from "@/lib/news/news";
 import { getSupabase } from "@/lib/supabase/client";
 import { useNews } from "@/stores/news";
 
@@ -25,7 +25,7 @@ function useServerNews() {
           kind: "server",
           title: r.title,
           body: r.body,
-          link: r.link ?? undefined,
+          link: safeInternalPath(r.link) ?? undefined,
           at: Date.parse(r.startsAt),
           expiresAt: r.expiresAt ? Date.parse(r.expiresAt) : null,
         })),

@@ -1,4 +1,5 @@
 import { eventAt, EVENTS } from "@/lib/events";
+import { safeInternalPath } from "@/lib/news/news";
 
 export type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string; userId: string | null };
 
@@ -43,7 +44,7 @@ export function dailyPushes(now: number, batch: PushBatch): { subscription: Push
   const news: PushMessage[] = batch.announcements.map((a) => ({
     title: `📢 ${a.title}`,
     body: clip(a.body),
-    url: a.link || "/news",
+    url: safeInternalPath(a.link) ?? "/news",
     tag: `news:${a.id}`,
   }));
   return batch.subscriptions.flatMap((subscription) => {
