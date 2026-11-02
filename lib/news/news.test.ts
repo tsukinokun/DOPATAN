@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { APP_NEWS } from "./catalog";
-import { eventNews, mergeNews, unreadCount, type News } from "./news";
+import { eventNews, mergeNews, safeInternalPath, unreadCount, type News } from "./news";
 
 const NOW = Date.parse("2026-11-04T12:00:00+09:00");
 const n = (id: string, at: number, extra: Partial<News> = {}): News => ({ id, kind: "app", title: id, body: "", at, ...extra });
@@ -32,5 +32,15 @@ describe("news", () => {
 
   it("has unique app news ids", () => {
     expect(new Set(APP_NEWS.map((x) => x.id)).size).toBe(APP_NEWS.length);
+  });
+});
+
+describe("safeInternalPath", () => {
+  it("only lets paths inside the app through", () => {
+    expect(safeInternalPath("/event")).toBe("/event");
+    expect(safeInternalPath("/presents?tab=1")).toBe("/presents?tab=1");
+    for (const bad of ["https://evil.com", "//evil.com", "/\\evil.com", "javascript:alert(1)", "event", "/a b", "", null, undefined]) {
+      expect(safeInternalPath(bad)).toBeNull();
+    }
   });
 });

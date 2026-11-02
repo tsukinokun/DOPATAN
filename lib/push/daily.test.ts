@@ -51,3 +51,14 @@ describe("daily pushes", () => {
     expect(out[0].message).toEqual({ title: "📢 アップデート", body: "新しいスキン", url: "/gacha", tag: "news:n1" });
   });
 });
+
+describe("links in pushes", () => {
+  it("never sends people outside the app", () => {
+    const out = dailyPushes(WED_7AM, {
+      ...empty,
+      subscriptions: [sub("https://x/1")],
+      announcements: [{ id: "n1", title: "t", body: "b", link: "https://evil.example.com" }],
+    });
+    expect(out[0].message.url).toBe("/news");
+  });
+});
