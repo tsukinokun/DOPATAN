@@ -20,11 +20,11 @@ type CloudSettings = Omit<Settings, "guestName">;
 
 function snapshot(): SyncedData<CloudSettings> {
   const { progress, sessions, bestScore, bestCombo } = useProgress.getState();
-  const { showJapanese, effectIntensity, sound, bgm, vibration, modes, bands, themes } = useSettings.getState();
+  const { showJapanese, effectIntensity, sound, bgm, vibration, tapToAnswer, modes, bands, themes } = useSettings.getState();
   return {
     progress,
     stats: { sessions, bestScore, bestCombo },
-    settings: { showJapanese, effectIntensity, sound, bgm, vibration, modes, bands, themes },
+    settings: { showJapanese, effectIntensity, sound, bgm, vibration, tapToAnswer, modes, bands, themes },
     wallet: walletSnapshot(),
   };
 }

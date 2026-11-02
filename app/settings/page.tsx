@@ -58,6 +58,10 @@ function SettingsView() {
         <Toggle label="効果音" setting="sound" settings={settings} />
         <Toggle label="BGM" setting="bgm" settings={settings} />
         <Toggle label="振動(スマホ)" setting="vibration" settings={settings} />
+        <div className="py-1">
+          <Toggle label="タップで答える" setting="tapToAnswer" settings={settings} testId="toggle-tap" />
+          <p className="-mt-2 pb-2 text-xs text-slate-500">オフにすると、カードをスワイプして重ねたときだけ答えます。</p>
+        </div>
       </Panel>
 
       <Panel className="flex flex-col gap-2">

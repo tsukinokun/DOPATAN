@@ -36,6 +36,7 @@ export function PlayScreen() {
   const router = useRouter();
   const level = useEffectLevel();
   const showJapanese = useSettings((s) => s.showJapanese);
+  const tapToAnswer = useSettings((s) => s.tapToAnswer);
   const recordAnswer = useProgress((s) => s.recordAnswer);
   const finishSession = useProgress((s) => s.finishSession);
 
@@ -304,6 +305,7 @@ export function PlayScreen() {
         />
         {question && phase !== "countdown" && (
           <Board
+            tapToAnswer={tapToAnswer}
             key={question.step}
             question={question}
             showJapanese={showJapanese}
