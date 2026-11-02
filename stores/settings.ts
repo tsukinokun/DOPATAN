@@ -9,6 +9,8 @@ export type Settings = {
   sound: boolean;
   bgm: boolean;
   vibration: boolean;
+  /** 下の選択肢をタップしても答えられる(オフならスワイプだけ) */
+  tapToAnswer: boolean;
   modes: QuestionMode[];
   /** 空なら全範囲 */
   bands: ScoreBand[];
@@ -27,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: true,
   bgm: true,
   vibration: true,
+  tapToAnswer: true,
   modes: [...QUESTION_MODES],
   bands: [],
   themes: [],

@@ -17,13 +17,23 @@ type Props = {
   onPickup?: () => void;
   /** 一時停止中は操作を受け付けない */
   paused?: boolean;
+  /** 下の選択肢をタップしても答えられる(設定でオフにできる) */
+  tapToAnswer?: boolean;
 };
 
 /**
  * 上の「持ち上げるもの」を下の選択肢のどれかに重ねて答える(Drops 方式)。
- * PC では数字キー(1〜4)でも選べる。
+ * 設定がオンなら、下の選択肢をタップしても答えられる。PC では数字キー(1〜4)でも選べる。
  */
-export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPickup, paused = false }: Props) {
+export function QuestionBoard({
+  question,
+  showJapanese,
+  feedback,
+  onAnswer,
+  onPickup,
+  paused = false,
+  tapToAnswer = true,
+}: Props) {
   const { target, options, mode, isIntro } = question;
   const targetRefs = useRef(new Map<string, HTMLElement>());
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -123,6 +133,12 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
               else targetRefs.current.delete(sense.id);
             }}
             data-testid={sense.id === target.id ? "drop-correct" : "drop-wrong"}
+            // タップでも答えられる。少し指が動いただけなら反応し、大きく動かすと取り消しになる(スクロールやスワイプで誤って答えない)
+            onTap={tapToAnswer && !locked ? () => answer(sense.id) : undefined}
+            whileTap={tapToAnswer && !locked ? { scale: 0.95 } : undefined}
+            role={tapToAnswer ? "button" : undefined}
+            aria-label={tapToAnswer ? `選択肢${i + 1}` : undefined}
+            data-sfx="off"
             initial={{ scale: 0.6, opacity: 0 }}
             animate={
               stateFor(sense) === "wrong"
@@ -130,7 +146,7 @@ export function QuestionBoard({ question, showJapanese, feedback, onAnswer, onPi
                 : { scale: 1, opacity: 1, x: 0 }
             }
             transition={{ delay: feedback ? 0 : i * 0.05, type: "spring", stiffness: 420, damping: 20 }}
-            className={`relative ${picturesBelow ? "aspect-square" : "h-24"}`}
+            className={`relative ${picturesBelow ? "aspect-square" : "h-24"} ${tapToAnswer && !locked ? "cursor-pointer" : ""}`}
           >
             {picturesBelow ? (
               <PictureCard

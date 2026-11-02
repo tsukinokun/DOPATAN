@@ -32,7 +32,7 @@ function toggle<T>(list: readonly T[], value: T): T[] {
 }
 
 function Home() {
-  const { bands, themes, update } = useSettings();
+  const { bands, themes, tapToAnswer, update } = useSettings();
   const { progress, bestScore, bestCombo } = useProgress();
   const scope = filterScope(getWords(), bands, themes);
   const [now] = useState(Date.now);
@@ -85,7 +85,9 @@ function Home() {
         </PopButton>
       </motion.div>
 
-      <p className="-mt-3 text-center text-sm font-black text-white">1回90秒・スワイプで答えよう</p>
+      <p className="-mt-3 text-center text-sm font-black text-white">
+        1回90秒・{tapToAnswer ? "スワイプかタップ" : "スワイプ"}で答えよう
+      </p>
 
       <EventBanner />
 

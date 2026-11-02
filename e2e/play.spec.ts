@@ -192,3 +192,48 @@ test("touch swipes answer questions, even after holding the card", async ({ page
     await page.waitForTimeout(700);
   }
 });
+
+const scoreOf = async (page: Page) => Number((await page.getByTestId("score").textContent())!.replace(/,/g, ""));
+
+test("tapping a card answers the question", async ({ page }) => {
+  await startGame(page);
+  // 最初は紹介の問題(1枚)なので、正解すると50点
+  await page.getByTestId("drop-correct").click();
+  await expect.poll(() => scoreOf(page)).toBe(50);
+});
+
+test("a real touch tap answers on phones", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "タッチ操作はスマホの設定だけで確かめる");
+  await startGame(page);
+  const box = (await page.getByTestId("drop-correct").boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+  await expect.poll(() => scoreOf(page)).toBe(50);
+});
+
+test("a swipe answers exactly once even though the cards are tappable", async ({ page }) => {
+  await startGame(page);
+  await dragTo(page, "drop-correct");
+  await expect.poll(() => scoreOf(page)).toBe(50);
+  await page.waitForTimeout(400);
+  expect(await scoreOf(page)).toBe(50);
+});
+
+test("turning tap off leaves only swiping", async ({ page }) => {
+  await openHome(page);
+  await page.goto("/settings");
+  await page.getByTestId("toggle-tap").click();
+  await expect(page.getByTestId("toggle-tap")).toHaveAttribute("aria-checked", "false");
+  await page.goto("/");
+  await expect(page.getByText("1回90秒・スワイプで答えよう")).toBeVisible();
+  await page.getByTestId("play").click({ force: true });
+  await waitForQuestion(page);
+  await page.getByTestId("drop-correct").click();
+  await page.waitForTimeout(800);
+  expect(await scoreOf(page)).toBe(0);
+  await dragTo(page, "drop-correct");
+  await expect.poll(() => scoreOf(page)).toBe(50);
+});
