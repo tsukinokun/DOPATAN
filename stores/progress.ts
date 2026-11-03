@@ -1,12 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { appStorage } from "@/lib/storage";
+import type { LevelBonus } from "@/lib/economy/levelBonus";
 import { applyAnswer, type SenseProgress } from "@/lib/srs";
 
 export type AnswerLog = { senseId: string; correct: boolean };
 
 export type SessionResult = {
+  /** レベルのボーナス込みのスコア(ハイスコア・ミッション・実績・イベントにはこれを使う) */
   score: number;
+  /** ボーナス前のスコア(古い記録には無い) */
+  baseScore?: number;
+  /** そのゲームを始めたときのレベルによるボーナス(古い記録には無い) */
+  levelBonus?: LevelBonus;
   maxCombo: number;
   correct: number;
   wrong: number;

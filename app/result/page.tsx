@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useEffect } from "react";
-import { speak } from "@/lib/fx/audio";
-import { burstConfetti, useEffectLevel } from "@/lib/fx/effects";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { sfx, speak } from "@/lib/fx/audio";
+import { burstConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
 import { POS_LABEL } from "@/lib/types";
 import { getWords } from "@/lib/words";
 import { RewardList } from "@/components/economy/RewardList";
@@ -14,6 +14,7 @@ import { FillBar } from "@/components/fx/FillBar";
 import { Ticker } from "@/components/fx/Ticker";
 import type { FillPoint } from "@/lib/fx/fill";
 import { Hydrated, Panel, PopButton } from "@/components/ui";
+import { useSettings } from "@/stores/settings";
 import { useWallet } from "@/stores/wallet";
 import { useProgress, type SessionResult } from "@/stores/progress";
 
@@ -40,7 +41,6 @@ function Result() {
 }
 
 function ResultView({ result }: { result: SessionResult }) {
-  const level = useEffectLevel();
   const rewards = useWallet((s) => s.lastRewards);
   const total = result.correct + result.wrong;
   const accuracy = total === 0 ? 0 : Math.round((result.correct / total) * 100);
@@ -49,12 +49,6 @@ function ResultView({ result }: { result: SessionResult }) {
   // 単語ごとに、そのセッションで1回でも間違えたかをまとめる
   const words = new Map<string, boolean>();
   for (const a of result.answers) words.set(a.senseId, (words.get(a.senseId) ?? true) && a.correct);
-
-  useEffect(() => {
-    if (result.newRecord) {
-      burstConfetti(level, { x: 0.5, y: 0.3 }, 2);
-    }
-  }, [level, result.newRecord]);
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-4 px-4 py-6">
@@ -68,19 +62,7 @@ function ResultView({ result }: { result: SessionResult }) {
       </motion.h1>
 
       <Panel className="flex flex-col items-center gap-1">
-        {result.newRecord && (
-          <span className="rainbow-text text-2xl font-black" data-testid="new-record">
-            NEW RECORD!!
-          </span>
-        )}
-        <span className="text-xs font-black text-slate-500">SCORE</span>
-        <Ticker
-          value={result.score}
-          from={0}
-          duration={1.2}
-          testId="result-score"
-          className="text-5xl font-black tabular-nums text-pink-500"
-        />
+        <ScoreWithBonus result={result} />
         <div className="mt-2 grid w-full grid-cols-3 text-center">
           <Mini label="正解率" value={`${accuracy}%`} />
           <Mini label="最大コンボ" value={`${result.maxCombo}`} />
@@ -144,6 +126,109 @@ function ResultView({ result }: { result: SessionResult }) {
         })}
       </ul>
     </main>
+  );
+}
+
+const BONUS_AT_MS = 1400;
+const BONUS_DONE_MS = 2900;
+
+/**
+ * スコアの演出:ボーナス前のスコアまで数え上がる → 「Lv.12 ボーナス +12%!」が飛び出す → 合計まで数え上がって弾む。
+ * NEW RECORD は最後に出す。演出を減らす設定のときは、合計と内訳をすぐ出す。
+ */
+function ScoreWithBonus({ result }: { result: SessionResult }) {
+  const level = useEffectLevel();
+  const quick = level === "low";
+  const bonus = result.levelBonus && result.levelBonus.points > 0 ? result.levelBonus : null;
+  const base = bonus ? (result.baseScore ?? result.score - bonus.points) : result.score;
+  const [stage, setStage] = useState<"base" | "bonus" | "done">(bonus && !quick ? "base" : "done");
+
+  // 段階ごとに次の段階を予約する(段階が変わると前の予約は片付くので、1つの effect でまとめて予約しない)
+  useEffect(() => {
+    if (stage === "base") {
+      const timer = setTimeout(() => {
+        setStage("bonus");
+        const playSound = (fn: () => void) => {
+          if (useSettings.getState().sound) fn();
+        };
+        playSound(() => sfx.comboMilestone());
+        setTimeout(() => playSound(() => sfx.coin()), 250);
+        burstConfetti(level, { x: 0.5, y: 0.25 }, 1.6);
+        vibrate([30, 30, 60]);
+      }, BONUS_AT_MS);
+      return () => clearTimeout(timer);
+    }
+    if (stage === "bonus") {
+      const timer = setTimeout(() => setStage("done"), BONUS_DONE_MS - BONUS_AT_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [level, stage]);
+
+  useEffect(() => {
+    if (stage === "done" && result.newRecord) burstConfetti(level, { x: 0.5, y: 0.3 }, 2);
+  }, [level, result.newRecord, stage]);
+
+  return (
+    <>
+      {result.newRecord && stage === "done" && (
+        <motion.span
+          className="rainbow-text text-2xl font-black"
+          data-testid="new-record"
+          initial={quick ? false : { scale: 0, rotate: -12 }}
+          animate={{ scale: [0, 1.3, 1], rotate: [-12, 6, 0] }}
+          transition={{ duration: 0.5 }}
+        >
+          NEW RECORD!!
+        </motion.span>
+      )}
+      <span className="text-xs font-black text-slate-500">SCORE</span>
+      <motion.div
+        key={stage === "done" ? "done" : "counting"}
+        className="relative rounded-2xl px-3"
+        initial={stage === "done" && bonus && !quick ? { boxShadow: "0 0 0 0px #facc15cc" } : false}
+        animate={stage === "done" && bonus && !quick ? { boxShadow: ["0 0 0 0px #facc15cc", "0 0 0 18px #facc1500"] } : undefined}
+        transition={{ duration: 0.7 }}
+      >
+        <Ticker
+          value={stage === "base" ? base : result.score}
+          from={0}
+          duration={1.2}
+          testId="result-score"
+          className="text-5xl font-black tabular-nums text-pink-500"
+        />
+        <AnimatePresence>
+          {stage === "bonus" && bonus && (
+            <motion.span
+              key="fly"
+              className="pointer-events-none absolute inset-x-0 -bottom-6 text-center text-2xl font-black text-amber-500 text-stroke"
+              initial={{ y: 40, opacity: 0, scale: 0.6 }}
+              animate={{ y: [40, 0, -24], opacity: [0, 1, 0], scale: [0.6, 1.4, 0.8] }}
+              transition={{ duration: 1.1, times: [0, 0.4, 1] }}
+            >
+              +{bonus.points.toLocaleString()}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.div>
+      {bonus && stage !== "base" && (
+        <motion.div
+          className="pop-border mt-3 flex flex-col items-center rounded-2xl bg-slate-900 px-4 py-1.5"
+          initial={quick ? false : { scale: 0, rotate: -25, y: 20 }}
+          animate={{ scale: 1, rotate: -3, y: 0 }}
+          transition={{ type: "spring", stiffness: 420, damping: 11 }}
+          data-testid="level-bonus"
+        >
+          <span className="rainbow-text text-2xl font-black">
+            Lv.{bonus.level} ボーナス +{bonus.percent}%!
+          </span>
+        </motion.div>
+      )}
+      {bonus && stage === "done" && (
+        <span className="mt-2 text-xs font-black text-slate-500" data-testid="score-breakdown">
+          基本 {base.toLocaleString()} + Lv.{bonus.level} ボーナス {bonus.points.toLocaleString()}
+        </span>
+      )}
+    </>
   );
 }
 
