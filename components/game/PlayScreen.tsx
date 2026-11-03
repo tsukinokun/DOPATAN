@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bgm, preloadVoice, sfx, speak, unlockAudio } from "@/lib/fx/audio";
 import { burstConfetti, feverConfetti, useEffectLevel, vibrate } from "@/lib/fx/effects";
+import { applyLevelBonus } from "@/lib/economy/levelBonus";
 import { equippedPerks } from "@/lib/economy/perks";
+import { levelFromXp } from "@/lib/economy/rewards";
 import { pointsFor } from "@/lib/score";
-import { skinCopies } from "@/lib/economy/ledger";
+import { skinCopies, totalXp } from "@/lib/economy/ledger";
 import { SessionEngine, type Question } from "@/lib/session";
 import { filterScope, getWords } from "@/lib/words";
 import { useProgress, type AnswerLog } from "@/stores/progress";
@@ -57,6 +59,8 @@ export function PlayScreen() {
     const { equipped, ledger } = useWallet.getState();
     return equippedPerks(equipped, skinCopies(ledger));
   });
+  // スコアのボーナスは、ゲームを始めたときのレベルで決める
+  const [playerLevel] = useState(() => levelFromXp(totalXp(useWallet.getState().ledger)));
 
   const [phase, setPhase] = useState<Phase>("countdown");
   const [countdown, setCountdown] = useState(3);
@@ -144,14 +148,16 @@ export function PlayScreen() {
     showBanner({ text: "TIME UP!", className: "text-pink-300" }, TIME_UP_DELAY);
     later(() => {
       const now = Date.now();
-      finishSession({ score: scoreRef.current, ...stats.current, finishedAt: now });
+      // レベル × 1% のボーナスを足した合計を、ハイスコア・ミッション・実績・イベントのすべてに使う
+      const { total, ...levelBonus } = applyLevelBonus(scoreRef.current, playerLevel);
+      finishSession({ score: total, baseScore: scoreRef.current, levelBonus, ...stats.current, finishedAt: now });
       // 学習記録を更新した後に報酬を計算する(マスターした単語や実績の判定に使うため)
-      const [sessionEvent] = useWallet.getState().recordSession({ ...stats.current, score: scoreRef.current }, now);
+      const [sessionEvent] = useWallet.getState().recordSession({ ...stats.current, score: total }, now);
       // ログイン中なら今週のリーグに XP を送る(失敗してもゲームは続ける)
       void useSocial.getState().submitXp(sessionEvent.xp ?? 0).catch(() => {});
       router.push("/event/progress");
     }, TIME_UP_DELAY);
-  }, [finishSession, later, playSound, router, showBanner]);
+  }, [finishSession, later, playSound, playerLevel, router, showBanner]);
 
   // 3, 2, 1, GO!
   useEffect(() => {
